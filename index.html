@@ -571,7 +571,7 @@ const FIELD_MAP = {
   fromUserId:'from_user_id', toUserId:'to_user_id', fromClassId:'from_class_id',
   toClassId:'to_class_id', doneBy:'done_by', createdBy:'created_by',
   classWeight:'class_weight', passThreshold:'pass_threshold',
-  gradingSystem:'grading_system', gradingOverride:'grading_override',
+  gradingSystem:'grading_system', gradingOverride:'grading_override', useCustom:'use_custom',
   classTotal:'class_total', workItemId:'work_item_id', maxScore:'max_score',
   classTeacherRemark:'class_teacher_remark', headTeacherRemark:'head_teacher_remark',
   teacherRemark:'class_teacher_remark', headRemark:'head_teacher_remark', resumeDate:'next_term_begins',
@@ -765,7 +765,10 @@ async function getGradingForClass(classId){
   if(classId){
     const customs=await dbGetAll('customGrades');
     const custom=customs.find(c=>c.classId==classId);
-    if(custom&&custom.bands&&custom.bands.length>0) return{type:'custom',bands:custom.bands};
+    if(custom){
+      if(custom.useCustom&&custom.bands&&custom.bands.length>0) return{type:'custom',bands:custom.bands};
+      if(custom.gradingSystem&&custom.gradingSystem!=='global') return{type:custom.gradingSystem};
+    }
   }
   return{type:cfg.gradingSystem};
 }
