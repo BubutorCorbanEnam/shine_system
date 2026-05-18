@@ -1,0 +1,5 @@
+﻿// Supabase browser configuration.
+// Replace these placeholders with your Supabase Project URL and anon public key.
+// Never put the service_role key in this browser file.
+window.SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
+window.SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_PUBLIC_KEY';
