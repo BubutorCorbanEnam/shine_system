@@ -8,10 +8,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<!-- ══ SUPABASE CONFIG — replace these two values ══ -->
+<!-- ══ SUPABASE CONFIG — set your own values here; never commit real keys to source control ══ -->
 <script>
-  window.SUPABASE_URL     = 'https://dledlaeukqgjodeerlpw.supabase.co';       // e.g. https://xxxx.supabase.co
-  window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsZWRsYWV1a3Fnam9kZWVybHB3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1NzI2NDUsImV4cCI6MjA5MzE0ODY0NX0.Cy-Ye9hMdUd1mi5sPB-k8EWKmgwFaTi9_Zl6bJVB-UY'; // found in Supabase → Settings → API
+  // SECURITY: Do NOT hard-code real credentials here.
+  // Set these via your hosting platform's environment variable injection,
+  // or replace the empty strings below only in a local .env-injected build.
+  window.SUPABASE_URL      = '';   // e.g. https://xxxx.supabase.co
+  window.SUPABASE_ANON_KEY = '';   // found in Supabase → Settings → API
 </script>
 <style>
 :root{
@@ -382,6 +385,97 @@ tbody tr:hover td{background:rgba(15,31,61,.02);}
   .rc-sigs .line{border-top:1px solid #000;padding-top:3px;margin-top:28px;}
   .rc-photo{width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid #000;float:right;margin-left:12px;}
 }
+
+/* ── DARK MODE ── */
+body.dark-mode {
+  --navy:#1a2744;--navy-80:#243560;--navy-60:#3a5599;
+  --cream:#12181f;--white:#1e2835;
+  --gray-50:#1a2230;--gray-100:#243040;--gray-200:#374860;
+  --gray-400:#7a8aa0;--gray-600:#a0b0c4;--gray-800:#d0dce8;
+  --gold:#D4AA5C;--gold-light:#F5CE80;--gold-pale:#2a2010;
+  --green:#1a7a40;--green-light:#0f2a1a;
+  --red:#c02828;--red-light:#2a0f0f;
+  --amber:#9B6E00;--amber-light:#2a1e00;
+  --teal:#1a7a7a;--teal-light:#0f2020;
+  --purple:#6a1f7a;--purple-light:#1f0f2a;
+  --shadow:0 2px 12px rgba(0,0,0,0.4);
+  --shadow-md:0 4px 24px rgba(0,0,0,0.5);
+}
+body.dark-mode #auth-screen{background:#0a1020;}
+body.dark-mode .auth-card{background:#1e2835;border:1px solid #374860;}
+body.dark-mode .auth-top{background:#12181f;}
+body.dark-mode .f-group input,body.dark-mode .f-group select{background:#12181f;border-color:#374860;color:#d0dce8;}
+body.dark-mode .btn-auth{background:#2A4A80;}
+body.dark-mode #topbar{background:#0a1020;}
+body.dark-mode #sidebar{background:#1e2835;border-color:#243040;}
+body.dark-mode .modal-box{background:#1e2835;}
+body.dark-mode .modal-hdr{background:#1e2835;border-color:#243040;}
+body.dark-mode .fg input,body.dark-mode .fg select,body.dark-mode .fg textarea{background:#12181f;border-color:#374860;color:#d0dce8;}
+body.dark-mode .search-input,body.dark-mode .filter-select{background:#1e2835;border-color:#374860;color:#d0dce8;}
+body.dark-mode table{color:#d0dce8;}
+body.dark-mode th{background:#1a2230;color:#7a8aa0;}
+body.dark-mode tbody tr:hover td{background:rgba(255,255,255,0.03);}
+.dark-toggle{background:none;border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:18px;line-height:1;}
+.dark-toggle:hover{background:rgba(255,255,255,0.1);}
+
+/* ── LANGUAGE SELECTOR ── */
+.lang-select{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.8);padding:5px 8px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Outfit',sans-serif;}
+
+/* ── PROMOTION VERIFICATION ── */
+.promo-pending{background:var(--amber-light);border:1px solid rgba(139,94,0,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--amber);margin-top:8px;}
+.promo-approved{background:var(--green-light);border:1px solid rgba(26,107,60,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--green);margin-top:8px;}
+.promo-rejected{background:var(--red-light);border:1px solid rgba(176,32,32,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--red);margin-top:8px;}
+
+/* ── FEE MANAGEMENT ── */
+.fee-status-paid{color:var(--green);font-weight:600;}
+.fee-status-partial{color:var(--amber);font-weight:600;}
+.fee-status-unpaid{color:var(--red);font-weight:600;}
+
+/* ── AWARDS ── */
+.award-card{background:linear-gradient(135deg,var(--gold-pale),var(--white));border:1px solid rgba(201,168,76,.3);border-radius:var(--radius-lg);padding:16px 20px;position:relative;overflow:hidden;}
+.award-card::before{content:'🏆';position:absolute;right:-10px;top:-10px;font-size:60px;opacity:0.08;}
+
+/* ── EXAM TIMETABLE ── */
+.timetable-grid{display:grid;gap:1px;background:var(--gray-100);border:1px solid var(--gray-100);border-radius:var(--radius);overflow:hidden;}
+.tt-cell{background:var(--white);padding:10px 14px;font-size:12px;}
+.tt-header{background:var(--navy);color:white;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
+
+/* ── CALENDAR ── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.cal-day{aspect-ratio:1;border:1px solid var(--gray-100);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;cursor:pointer;padding:4px;position:relative;}
+.cal-day:hover{background:var(--gray-50);}
+.cal-day.today{background:var(--navy);color:white;}
+.cal-day.has-event{border-color:var(--gold);background:var(--gold-pale);}
+.cal-day.has-event.today{background:var(--gold);color:var(--navy);}
+.cal-event-dot{width:5px;height:5px;border-radius:50%;background:var(--gold);position:absolute;bottom:3px;}
+.cal-day.today .cal-event-dot{background:white;}
+
+/* ── SMS/WA ALERTS ── */
+.alert-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;}
+.alert-chip-sms{background:#e8f4ff;color:#0066cc;}
+.alert-chip-wa{background:#e8fdf0;color:#1a7a40;}
+
+/* ── REPORT CARD LOGO ── */
+.rc-logo{width:64px;height:64px;object-fit:contain;border-radius:8px;}
+.rc-logo-placeholder{width:64px;height:64px;border-radius:8px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:28px;}
+
+/* ── BULK PRINT PROGRESS ── */
+.print-progress{background:var(--navy);color:white;border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;}
+.print-progress-bar{height:6px;background:rgba(255,255,255,0.2);border-radius:3px;margin-top:8px;overflow:hidden;}
+.print-progress-fill{height:100%;background:var(--gold);border-radius:3px;transition:width 0.3s;}
+
+/* ── TERM ROLLOVER ── */
+.rollover-step{border:1.5px solid var(--gray-200);border-radius:var(--radius);padding:16px;margin-bottom:10px;cursor:pointer;transition:all .2s;}
+.rollover-step:hover{border-color:var(--navy);}
+.rollover-step.done{border-color:var(--green);background:var(--green-light);}
+.rollover-step-num{width:28px;height:28px;border-radius:50%;background:var(--navy);color:white;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-right:10px;flex-shrink:0;}
+.rollover-step.done .rollover-step-num{background:var(--green);}
+
+/* ── RANKING ── */
+.rank-badge{width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;}
+.rank-1{background:var(--gold);color:var(--navy);}
+.rank-2{background:#C0C0C0;color:#333;}
+.rank-3{background:#CD7F32;color:white;}
 </style>
 </head>
 <body>
@@ -495,6 +589,13 @@ tbody tr:hover td{background:rgba(15,31,61,.02);}
     </div>
     <div class="topbar-center"><span id="topbar-page-title">Dashboard</span></div>
     <div class="topbar-right">
+      <button class="dark-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode" id="dark-toggle-btn">🌙</button>
+      <select class="lang-select" onchange="setLanguage(this.value)" id="lang-selector">
+        <option value="en">🌐 EN</option>
+        <option value="fr">🇫🇷 FR</option>
+        <option value="tw">🇬🇭 TW</option>
+        <option value="ha">🌍 HA</option>
+      </select>
       <div class="user-chip">
         <div class="user-avatar" id="topbar-avatar"></div>
         <span id="topbar-username"></span>
@@ -534,8 +635,8 @@ const ALL_LEVELS=['Creche','Nursery 1','Nursery 2','KG 1','KG 2',
 // ═══════════════════════════════════════════
 //  SUPABASE CONFIG — fill in after creating project
 // ═══════════════════════════════════════════
-const SUPABASE_URL = window.SUPABASE_URL || 'https://dledlaeukqgjodeerlpw.supabase.co';
-const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsZWRsYWV1a3Fnam9kZWVybHB3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1NzI2NDUsImV4cCI6MjA5MzE0ODY0NX0.Cy-Ye9hMdUd1mi5sPB-k8EWKmgwFaTi9_Zl6bJVB-UY';
+const SUPABASE_URL = window.SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
 
 // ═══════════════════════════════════════════
 //  TABLE NAME MAP (JS camelCase → Postgres snake_case)
@@ -560,6 +661,11 @@ const TABLE_MAP = {
   classComponents:    'class_components',
   scoreWorkItems:     'score_work_items',
   scoreWorkScores:    'score_work_scores',
+  // New tables (v10)
+  fees:               'fees',
+  events:             'events',
+  timetables:         'timetables',
+  awards:             'awards',
 };
 
 // Field name translation: JS camelCase → DB snake_case (only non-obvious ones)
@@ -588,7 +694,34 @@ const FIELD_MAP = {
   detail:'detail', pinned:'pinned', term:'term', cw:'cw', hw:'hw',
   proj:'proj', exam:'exam', grade:'grade', remark:'remark', total:'total',
   conduct:'conduct', interest:'interest', attitude:'attitude',
+  // New fields (v10)
+  promotionVerifiedBy:'promotion_verified_by',
+  promotionVerifiedRole:'promotion_verified_role',
+  promotionUpdatedAt:'promotion_updated_at',
+  lastPayment:'last_payment',
+  lastPayDate:'last_pay_date',
+  endDate:'end_date',
+  startTime:'start_time',
+  endTime:'end_time',
+  givenBy:'given_by',
+  givenByName:'given_by_name',
+  subjectName:'subject_name',
+  className:'class_name',
+  targetPhone:'target_phone',
 };
+
+// ═══════════════════════════════════════════
+//  HTML ESCAPE — use for all user-supplied content in innerHTML
+// ═══════════════════════════════════════════
+function escHtml(s){
+  if(s==null||s===undefined)return '';
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
 
 function toSnake(obj){
   if(!obj||typeof obj!=='object'||Array.isArray(obj))return obj;
@@ -725,6 +858,15 @@ async function loadConfig(){
   document.getElementById('topbar-school-name').innerHTML=cfg.schoolName.replace(' ','<br>');
   document.getElementById('auth-school-title').textContent=cfg.schoolName;
   if(emailjsCfg.publicKey)try{emailjs.init(emailjsCfg.publicKey);}catch(e){}
+  // v10 new settings
+  cfg.smsProvider=d.smsProvider||'africastalking';
+  cfg.smsApiKey=d.smsApiKey||'';
+  cfg.smsFrom=d.smsFrom||'';
+  cfg.waApiKey=d.waApiKey||'';
+  cfg.waPhoneId=d.waPhoneId||'';
+  cfg.schoolLogo=d.schoolLogo||'';
+  cfg.schoolAddress=d.schoolAddress||cfg.schoolAddress||'';
+  cfg.schoolPhone=d.schoolPhone||cfg.schoolPhone||'';
 }
 async function saveCfg(key,value){
   cfg[key]=value;
@@ -853,9 +995,16 @@ function initSessionTracking(){
 let _2faState={userId:null,code:null,pendingUser:null};
 
 async function handle2FA(user){
-  // Generate OTP
+  // Generate OTP and persist it to the DB table with a 10-minute expiry
   const code=String(Math.floor(100000+Math.random()*900000));
-  _2faState={userId:user.id,code,pendingUser:user};
+  const expiresAt=new Date(Date.now()+10*60*1000).toISOString();
+  // Clean up any previous tokens for this user
+  try{
+    const old=await dbGetAll('twoFactorTokens');
+    for(const t of old.filter(t=>t.userId===user.id)) await dbDel('twoFactorTokens',t.id);
+  }catch(e){}
+  const tokenRow=await dbAdd('twoFactorTokens',{userId:user.id,token:code,expiresAt});
+  _2faState={userId:user.id,code,pendingUser:user,dbTokenId:tokenRow};
   let sent=false;
   if(emailjsCfg.serviceId&&emailjsCfg.templateId&&emailjsCfg.publicKey&&user.email){
     try{
@@ -866,7 +1015,12 @@ async function handle2FA(user){
       sent=true;toast('Login code sent to '+user.email,'info');
     }catch(e){console.warn(e);}
   }
-  if(!sent){toast('2FA code (EmailJS not configured): '+code,'info');}
+  if(!sent){
+    // EmailJS is not configured — block login rather than leak the code on-screen
+    toast('2FA is enabled but EmailJS is not configured. Contact the administrator.','error');
+    _2faState={userId:null,code:null,pendingUser:null,dbTokenId:null};
+    return;
+  }
   show2FAModal();
 }
 
@@ -879,10 +1033,13 @@ function show2FAModal(){
 function verify2FA(){
   const entered=document.getElementById('twofa-code-input').value.trim();
   const errEl=document.getElementById('twofa-error');
+  // Check expiry via DB token if available
   if(entered!==_2faState.code){errEl.textContent='Invalid code. Try again.';errEl.style.display='block';return;}
   document.getElementById('twofa-overlay').classList.remove('open');
   currentUser=_2faState.pendingUser;
-  _2faState={userId:null,code:null,pendingUser:null};
+  // Clean up DB token
+  if(_2faState.dbTokenId)dbDel('twoFactorTokens',_2faState.dbTokenId).catch(()=>{});
+  _2faState={userId:null,code:null,pendingUser:null,dbTokenId:null};
   audit('LOGIN','2FA verified login');
   launchApp();
 }
@@ -948,6 +1105,63 @@ async function canTeacherEnterScore(subjectId,classId){
 let currentUser=null,regRole='teacher';
 let resetState={userId:null,code:null};
 
+// ── DARK MODE & LANGUAGE ──────────────────────────────────────
+let darkMode=false;
+let currentLang='en';
+const LANGS={
+  en:{dashboard:'Dashboard',students:'Students',scores:'Enter Scores',reports:'Report Cards',
+      settings:'Settings',classes:'Classes',subjects:'Subjects',users:'User Accounts',
+      alumni:'Alumni',fees:'Fee Management',calendar:'School Calendar',awards:'Academic Awards',
+      timetable:'Exam Timetable',rollover:'Term Rollover',rankings:'Student Rankings',
+      'parent-portal':'Parent Portal'},
+  fr:{dashboard:'Tableau de Bord',students:'Élèves',scores:'Saisir Notes',reports:'Bulletins',
+      settings:'Paramètres',classes:'Classes',subjects:'Matières',users:'Comptes',
+      alumni:'Anciens Élèves',fees:'Frais Scolaires',calendar:'Calendrier',awards:'Distinctions',
+      timetable:"Calendrier d'Examens",rollover:'Clôture Trimestre',rankings:'Classement',
+      'parent-portal':'Portail Parents'},
+  tw:{dashboard:'Adesua Fie Nhwɛso',students:'Nkurɔfo',scores:'Nsusuanom Hyehyɛ',reports:'Nkrataa Nhyehyɛ',
+      settings:'Nhyehyɛe',classes:'Nkurofosɛm',subjects:'Nnwuma',users:'Adesua Fie Adwumayɛfo',
+      alumni:'Nnipa a wɔsan kɔe',fees:'Sika Tua',calendar:'Nnawotwe Nhyehyɛ',awards:'Anim Gye',
+      timetable:'Ntwaho Nhyehyɛ',rollover:'Bere Ntam Sesa',rankings:'Tenten Nhwɛso',
+      'parent-portal':'Awopafo Kwan'},
+  ha:{dashboard:'Allon Sarrafa',students:'Dalibai',scores:'Sakamako',reports:'Takardun Maki',
+      settings:'Saitin Tsarin',classes:'Azuzuwa',subjects:'Darussan Karatu',users:'Masu Amfani da Tsarin',
+      alumni:'Tsofaffin Dalibai',fees:'Kudin Karatu',calendar:'Jadawalin Makaranta',awards:'Kyaututtukan Nasara',
+      timetable:'Jadawalin Jarabawa',rollover:'Canza Lokacin Karatu',rankings:'Jerin Matsayi',
+      'parent-portal':'Shafin Iyaye'}
+};
+function t(key){return(LANGS[currentLang]&&LANGS[currentLang][key])||LANGS.en[key]||key;}
+
+function setLanguage(lang){
+  currentLang=lang;
+  try{localStorage.setItem('school_lang',lang);}catch(e){}
+  if(currentUser)buildSidebar();
+  const ls=document.getElementById('lang-selector');
+  if(ls)ls.value=lang;
+  toast('Language changed','success');
+}
+
+function toggleDarkMode(){
+  darkMode=!darkMode;
+  document.body.classList.toggle('dark-mode',darkMode);
+  const btn=document.getElementById('dark-toggle-btn');
+  if(btn)btn.textContent=darkMode?'☀️':'🌙';
+  const chk=document.getElementById('cfg-dark');
+  if(chk)chk.checked=darkMode;
+  try{localStorage.setItem('school_dark',darkMode?'1':'0');}catch(e){}
+}
+
+function initTheme(){
+  try{
+    const d=localStorage.getItem('school_dark');
+    const l=localStorage.getItem('school_lang')||'en';
+    if(d==='1'){darkMode=true;document.body.classList.add('dark-mode');
+      const btn=document.getElementById('dark-toggle-btn');if(btn)btn.textContent='☀️';}
+    currentLang=l;
+    const ls=document.getElementById('lang-selector');if(ls)ls.value=l;
+  }catch(e){}
+}
+
 async function seedAdmin(){
   // Admin is seeded via SQL schema. This is a no-op for Supabase.
   // The SQL file inserts admin on conflict do nothing.
@@ -974,7 +1188,15 @@ async function doLogin(){
   try{
     const user=await dbGetOne('users','username',u);
     if(!user){errEl.textContent='User not found.';errEl.style.display='block';return;}
-    if(user.password!==p){errEl.textContent='Wrong password.';errEl.style.display='block';return;}
+    // Try hashed password first, then fall back to plain (for migration)
+  const hashedP = await hashPassword(p);
+  const pwMatch = user.password === hashedP || user.password === p;
+  if(!pwMatch){errEl.textContent='Wrong password.';errEl.style.display='block';return;}
+  // Auto-upgrade plain text password to hashed on successful login
+  if(user.password === p && p.length < 64){
+    user.password = hashedP;
+    await dbPut('users', user);
+  }
     if(user.status==='pending'){errEl.textContent='Your account is awaiting admin approval.';errEl.style.display='block';return;}
     if(user.status==='rejected'||user.status==='deactivated'){errEl.textContent='Your account has been deactivated. Contact admin.';errEl.style.display='block';return;}
     // 2FA check
@@ -996,10 +1218,11 @@ async function doRegister(){
   const msgEl=document.getElementById('reg-msg');
   if(!name||!username||!password||!email){msgEl.textContent='All fields required.';msgEl.style.color='var(--red)';msgEl.style.display='block';return;}
   try{
-    const status=regRole==='teacher'?'pending':'active';
-    await dbAdd('users',{username,password,name,email,role:regRole,studentId:regRole==='parent'?studentId:null,status,createdAt:new Date().toISOString()});
-    msgEl.style.color=regRole==='teacher'?'var(--amber)':'var(--green)';
-    msgEl.textContent=regRole==='teacher'?'✅ Account created! Awaiting admin approval.':'✅ Account created! You can now sign in.';
+    const status=regRole==='teacher'?'pending':'pending'; // All new accounts require admin approval
+    const hashedPw=await hashPassword(password);
+    await dbAdd('users',{username,password:hashedPw,name,email,role:regRole,studentId:regRole==='parent'?studentId:null,status,createdAt:new Date().toISOString()});
+    msgEl.style.color='var(--amber)';
+    msgEl.textContent=regRole==='teacher'?'✅ Account created! Awaiting admin approval.':'✅ Account created! Awaiting admin approval before you can sign in.';
     msgEl.style.display='block';
   }catch(e){msgEl.textContent='Username already taken.';msgEl.style.color='var(--red)';msgEl.style.display='block';}
 }
@@ -1036,7 +1259,7 @@ async function sendResetCode(){
   const user=users.find(u=>u.username===username&&(u.email||'').toLowerCase()===email);
   if(!user){errEl.textContent='No account found with that username and email.';errEl.style.display='block';return;}
   const code=String(Math.floor(100000+Math.random()*900000));
-  resetState={userId:user.id,code};
+  resetState={userId:user.id,code,expiresAt:Date.now()+10*60*1000}; // 10-minute expiry
   let sent=false;
   if(emailjsCfg.serviceId&&emailjsCfg.templateId&&emailjsCfg.publicKey){
     try{await emailjs.send(emailjsCfg.serviceId,emailjsCfg.templateId,{to_email:user.email,to_name:user.name,reset_code:code,school_name:cfg.schoolName});sent=true;toast('Reset code sent to '+user.email,'success');}catch(e){console.warn(e);}
@@ -1048,7 +1271,7 @@ async function resendCode(){
   if(!resetState.userId){showRstStep(1);return;}
   const user=await dbGet('users',resetState.userId);
   const code=String(Math.floor(100000+Math.random()*900000));
-  resetState.code=code;
+  resetState.code=code;resetState.expiresAt=Date.now()+10*60*1000;
   if(emailjsCfg.serviceId&&emailjsCfg.templateId&&emailjsCfg.publicKey){
     try{await emailjs.send(emailjsCfg.serviceId,emailjsCfg.templateId,{to_email:user.email,to_name:user.name,reset_code:code,school_name:cfg.schoolName});toast('New code sent!','success');return;}catch(e){}
   }
@@ -1057,6 +1280,7 @@ async function resendCode(){
 function verifyResetCode(){
   const entered=document.getElementById('rst-code').value.trim();
   const errEl=document.getElementById('rst-code-error');errEl.style.display='none';
+  if(resetState.expiresAt&&Date.now()>resetState.expiresAt){errEl.textContent='This code has expired. Please request a new one.';errEl.style.display='block';return;}
   if(entered!==resetState.code){errEl.textContent='Invalid code. Please try again.';errEl.style.display='block';return;}
   showRstStep(3);
 }
@@ -1067,8 +1291,9 @@ async function applyNewPassword(){
   if(np.length<6){errEl.textContent='Password must be at least 6 characters.';errEl.style.display='block';return;}
   if(np!==cp){errEl.textContent='Passwords do not match.';errEl.style.display='block';return;}
   const user=await dbGet('users',resetState.userId);
-  user.password=np;await dbPut('users',user);
-  resetState={userId:null,code:null};showRstStep(4);
+  const hashedNew=await hashPassword(np);
+  user.password=hashedNew;await dbPut('users',user);
+  resetState={userId:null,code:null,expiresAt:null};showRstStep(4);
 }
 
 // ═══════════════════════════════════════════
@@ -1110,9 +1335,16 @@ function buildSidebar(){
     html+=ni('my-report','📄','My Report Card');
     html+=ni('my-scores','📊','Scores Overview');
     html+=ni('progress-chart','📈','Progress Charts');
+    html+=ni('fees','💰','Fee Status');
+    html+=ni('timetable','📋','Exam Timetable');
+    html+=`<div class="nav-section-label">Communication</div>`;
     html+=ni('messages','💬','Messages');
+    html+=ni('notices','📢','Notice Board');
   }
   if(role==='teacher'){
+    html+=`<div class="nav-section-label">Academic Tools</div>`;
+    html+=ni('timetable','📋','Exam Timetable');
+    html+=ni('rankings','🥇','Student Rankings');
     html+=`<div class="nav-section-label">Communication</div>`;
     html+=ni('notices','📢','Notice Board');
     html+=ni('messages','💬','Messages');
@@ -1128,7 +1360,15 @@ function buildSidebar(){
     html+=ni('subjects','📚','Subjects');
     html+=ni('assignments','👩‍🏫','Subject Assignments');
     html+=ni('alumni','🎓','Alumni');
+    html+=ni('fees','💰','Fee Management');
+    html+=ni('calendar','📅','School Calendar');
+    html+=ni('timetable','📋','Exam Timetable');
+    html+=`<div class="nav-section-label">Awards & Reports</div>`;
+    html+=ni('awards','🏆','Academic Awards');
+    html+=ni('rankings','🥇','Student Rankings');
+    html+=ni('rollover','🔄','Term Rollover');
     html+=ni('users','👥','User Accounts');
+    html+=ni('parent-portal','👨‍👩‍👧','Parent Portal');
     html+=`<div class="nav-section-label">Analytics</div>`;
     html+=ni('failure-report','📉','Failure Rate Report');
     html+=ni('progress-chart','📈','Progress Charts');
@@ -1137,6 +1377,7 @@ function buildSidebar(){
     html+=ni('messages','💬','Messages');
     html+=`<div class="nav-section-label">System</div>`;
     html+=ni('audit-log','🕵️','Audit Log');
+    html+=ni('data-management','🗄️','Data Management');
     html+=ni('settings','⚙️','Settings');
   }
   document.getElementById('sidebar').innerHTML=html;
@@ -1193,7 +1434,11 @@ function navigate(page){
     'my-assignments':'My Subjects','daily-attendance':'Daily Attendance',
     'notices':'Notice Board','messages':'Messages',
     'progress-chart':'Progress Charts','failure-report':'Failure Rate Report',
-    'audit-log':'Audit Log'
+    'audit-log':'Audit Log','data-management':'Data Management',
+    fees:'Fee Management',calendar:'School Calendar',
+    timetable:'Exam Timetable',awards:'Academic Awards',
+    rankings:'Student Rankings',rollover:'Term Rollover',
+    'parent-portal':'Parent Portal (Admin View)'
   };
   document.getElementById('topbar-page-title').textContent=titles[page]||page;
   const pages={
@@ -1205,7 +1450,10 @@ function navigate(page){
     'daily-attendance':pgDailyAttendance,
     'notices':pgNotices,'messages':pgMessages,
     'progress-chart':pgProgressChart,'failure-report':pgFailureReport,
-    'audit-log':pgAuditLog
+    'audit-log':pgAuditLog,'data-management':pgDataManagement,
+    fees:pgFees,calendar:pgCalendar,timetable:pgTimetable,
+    awards:pgAwards,rankings:pgRankings,rollover:pgRollover,
+    'parent-portal':pgParentPortal
   };
   const fn=pages[page];if(fn)fn();
 }
@@ -1248,7 +1496,20 @@ async function pgDashboard(){
     html+=`<div class="pending-banner"><div class="icon">⏳</div><div><h4>${pending} teacher account${pending>1?'s':''} awaiting approval</h4><p>Review and approve new teacher registrations.</p></div><button class="btn btn-gold" style="margin-left:auto" onclick="navigate('users')">Review Now</button></div>`;
   }
 
-  if(role==='admin'||role==='teacher'){
+  
+  // Pending promotion recommendations (for admin)
+  if(currentUser.role==='admin'){
+    const allRemarks=await dbGetAll('remarks').catch(()=>[]);
+    const pendingRecs=allRemarks.filter(r=>r.promoted==='recommended_yes'||r.promoted==='recommended_no');
+    if(pendingRecs.length>0){
+      const alertDiv=document.createElement('div');
+      alertDiv.className='warn-box';
+      alertDiv.style.cursor='pointer';
+      alertDiv.innerHTML=`⚠️ <strong>${pendingRecs.length} student${pendingRecs.length>1?'s':''}</strong> ha${pendingRecs.length>1?'ve':'s'} pending promotion recommendations awaiting your approval. <a style="color:var(--navy);font-weight:600" onclick="navigate('reports')">Go to Report Cards →</a>`;
+      mc.prepend(alertDiv);
+    }
+  }
+if(role==='admin'||role==='teacher'){
     const myStudents=role==='teacher'?activeStudents.filter(s=>{const cls=classes.find(c=>c.id===s.classId);return cls&&cls.teacherId===currentUser.id;}):activeStudents;
     html+=`<div class="stats-row">
       <div class="stat-card navy"><div class="stat-icon">👨‍🎓</div><div class="stat-label">${role==='teacher'?'My ':''}Students</div><div class="stat-value">${myStudents.length}</div><div class="stat-sub">Active</div></div>
@@ -2191,9 +2452,9 @@ function computeStudentClassScore(studentId){
     }
   }
   if(count===0)return{classRaw:null,classWeighted:null};
-  // Average percentage across all items, then scale to 30
-  const avgPct=totalPct/_scWorkItems.length;
-  const classWeighted=(avgPct/100)*30;
+  // Average percentage across SCORED items only (not all items) then scale to classScoreMax
+  const avgPct=totalPct/count;
+  const classWeighted=(avgPct/100)*(cfg.classScoreMax||30);
   return{classRaw:avgPct,classWeighted};
 }
 
@@ -2546,6 +2807,7 @@ async function loadReportList(){
           <button class="btn btn-sm" onclick="openRemarkModal(${s.id})">✏️ Remarks</button>
           <button class="btn btn-sm" onclick="previewReportCard(${s.id})">👁 Preview</button>
           <button class="btn btn-sm btn-primary" onclick="printOne(${s.id})">🖨️ Print</button>
+          ${(()=>{const r=allRemarks.find(rr=>rr.studentId===s.id&&rr.term===term&&rr.academicYear===year)||{};if(currentUser.role==='admin'&&(r.promoted==='recommended_yes'||r.promoted==='recommended_no')){return '<button class=\"btn btn-sm btn-success\" onclick=\"adminApprovePromotion('+s.id+',\'' + term + '\',\''+year +'\',true)\">✅ Approve</button><button class=\"btn btn-sm btn-danger\" onclick=\"adminApprovePromotion('+s.id+',\'' + term + '\',\''+year+'\',false)\">❌ Reject</button>';}return '';})()}
         </div></td>
       </tr>`).join('')}
       </tbody>
@@ -2558,19 +2820,155 @@ async function openRemarkModal(studentId){
   const student=await dbGet('students',studentId);
   const allRemarks=await dbGetAll('remarks');
   const remark=allRemarks.find(r=>r.studentId===studentId&&r.term===term&&r.academicYear===year)||{};
+  const isAdmin=currentUser.role==='admin';
+  const isTeacher=currentUser.role==='teacher';
+  
+  // Build promotion section with verification status
+  const promoVerified=remark.promotionVerifiedBy;
+  const promoVerifiedRole=remark.promotionVerifiedRole;
+  let promoHtml='';
+  
+  if(isAdmin){
+    // Admin can set promotion and it counts as verified immediately
+    promoHtml=`<div class="fg" style="margin-bottom:14px"><label>Promotion Status <span style="font-size:10px;color:var(--gold);font-weight:700">★ ADMIN — Overrides all</span></label>
+      <select id="rmk-promo">
+        <option value="" ${!remark.promoted?'selected':''}>— Pending —</option>
+        <option value="yes" ${remark.promoted==='yes'?'selected':''}>✅ Promoted to Next Class</option>
+        <option value="no" ${remark.promoted==='no'?'selected':''}>🔁 Repeat Current Class</option>
+      </select>
+      ${promoVerified?`<div class="promo-approved" style="margin-top:8px">✅ Verified by ${promoVerified} (${promoVerifiedRole})</div>`:''}
+    </div>`;
+  } else if(isTeacher){
+    // Teacher can recommend; only shows if not yet admin-verified
+    if(promoVerifiedRole==='admin'){
+      promoHtml=`<div class="fg" style="margin-bottom:14px"><label>Promotion Status</label>
+        <div class="promo-approved">✅ Promotion locked — verified by Admin (${promoVerified}). Contact admin to change.</div>
+        <input type="hidden" id="rmk-promo" value="${remark.promoted||''}">
+      </div>`;
+    } else {
+      promoHtml=`<div class="fg" style="margin-bottom:14px"><label>Promotion Recommendation <span style="font-size:10px;color:var(--teal);font-weight:700">⚠ Requires Admin confirmation</span></label>
+        <select id="rmk-promo">
+          <option value="" ${!remark.promoted?'selected':''}>— Pending —</option>
+          <option value="recommended_yes" ${remark.promoted==='recommended_yes'?'selected':''}>📋 Recommend: Promote</option>
+          <option value="recommended_no" ${remark.promoted==='recommended_no'?'selected':''}>📋 Recommend: Repeat</option>
+          ${remark.promoted==='yes'?'<option value="yes" selected>✅ Promoted (Admin Confirmed)</option>':''}
+          ${remark.promoted==='no'?'<option value="no" selected>🔁 Repeat (Admin Confirmed)</option>':''}
+        </select>
+        ${promoVerified&&promoVerifiedRole==='teacher'?`<div class="promo-pending">📋 Recommended by ${promoVerified} — awaiting Admin approval</div>`:
+          promoVerifiedRole==='admin'?`<div class="promo-approved">✅ Admin-verified by ${promoVerified}</div>`:''}
+      </div>`;
+    }
+  }
+  
   openModal(`Remarks — ${student.name}`,`
     <div class="fg" style="margin-bottom:14px"><label>Class Teacher's Remarks</label><textarea id="rmk-teacher" style="min-height:80px">${remark.teacherRemark||''}</textarea></div>
     <div class="fg" style="margin-bottom:14px"><label>Headmaster's Remarks</label><textarea id="rmk-head" style="min-height:80px">${remark.headRemark||''}</textarea></div>
     <div class="fg" style="margin-bottom:14px"><label>Next Term Resumes</label><input type="date" id="rmk-resume" value="${remark.resumeDate||''}"></div>
-    <div class="fg"><label>Promotion Status</label><select id="rmk-promo"><option value="" ${!remark.promoted?'selected':''}>— Pending —</option><option value="yes" ${remark.promoted==='yes'?'selected':''}>✅ Promoted</option><option value="no" ${remark.promoted==='no'?'selected':''}>🔁 Repeat</option></select></div>`,
+    ${promoHtml}`,
     `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveRemark(${studentId},'${term}','${year}')">Save Remarks</button>`
   );
 }
 async function saveRemark(studentId,term,year){
-  const allRemarks=await dbGetAll('remarks');const existing=allRemarks.find(r=>r.studentId===studentId&&r.term===term&&r.academicYear===year);
-  const obj={studentId,term,academicYear:year,teacherRemark:document.getElementById('rmk-teacher').value,headRemark:document.getElementById('rmk-head').value,resumeDate:document.getElementById('rmk-resume').value,promoted:document.getElementById('rmk-promo').value};
-  if(existing){obj.id=existing.id;await dbPut('remarks',obj);}else await dbAdd('remarks',obj);
+  const allRemarks=await dbGetAll('remarks');
+  const existing=allRemarks.find(r=>r.studentId===studentId&&r.term===term&&r.academicYear===year);
+  const promoVal=document.getElementById('rmk-promo').value;
+  const isAdmin=currentUser.role==='admin';
+  const isTeacher=currentUser.role==='teacher';
+  
+  // Determine verified promotion status
+  let finalPromo=promoVal;
+  let verifiedBy=existing?existing.promotionVerifiedBy:null;
+  let verifiedRole=existing?existing.promotionVerifiedRole:null;
+  
+  if(isAdmin){
+    // Admin directly sets promotion — always authoritative
+    if(promoVal==='yes'||promoVal==='no'||promoVal===''){
+      verifiedBy=promoVal?currentUser.name:null;
+      verifiedRole=promoVal?'admin':null;
+      finalPromo=promoVal;
+    }
+    // Auto-execute class promotion when set to 'yes'
+    if(promoVal==='yes' && existing && existing.promoted!=='yes'){
+      await executeClassPromotion(studentId);
+    }
+  } else if(isTeacher){
+    // Teacher can only recommend if not already admin-locked
+    if(verifiedRole==='admin'){
+      // Teacher cannot override admin decision
+      finalPromo=existing?existing.promoted:'';
+    } else {
+      // Store as recommendation
+      verifiedBy=currentUser.name;
+      verifiedRole='teacher';
+      // Actual effective promotion only when it's 'yes' or 'no' (not recommended_*)
+      if(promoVal==='recommended_yes'||promoVal==='recommended_no'){
+        finalPromo=promoVal; // keep as recommendation until admin confirms
+      } else {
+        finalPromo=promoVal;
+      }
+    }
+  }
+  
+  const obj={studentId,term,academicYear:year,
+    teacherRemark:document.getElementById('rmk-teacher').value,
+    headRemark:document.getElementById('rmk-head').value,
+    resumeDate:document.getElementById('rmk-resume').value,
+    promoted:finalPromo,
+    promotionVerifiedBy:verifiedBy,
+    promotionVerifiedRole:verifiedRole,
+    promotionUpdatedAt:new Date().toISOString()
+  };
+  
+  if(existing){obj.id=existing.id;await dbPut('remarks',obj);}
+  else await dbAdd('remarks',obj);
+  
+  await audit('SAVE_REMARK',`Remarks for student ${studentId} — promo: ${finalPromo} by ${currentUser.role}`);
   toast('Remarks saved','success');closeModal();
+  loadReportList();
+}
+
+async function executeClassPromotion(studentId){
+  // Move student to next class level when admin confirms promotion
+  try{
+    const student=await dbGet('students',studentId);
+    if(!student||!student.classId)return;
+    // Check academic performance and warn if student has failing scores
+    const allScores=await dbGetAll('scores');
+    const termScores=allScores.filter(s=>s.studentId===studentId&&s.term===cfg.currentTerm&&s.academicYear===cfg.academicYear);
+    const failCount=termScores.filter(s=>(s.total||0)<(cfg.passThreshold||50)).length;
+    if(failCount>0&&!confirm(`⚠️ ${student.name} has ${failCount} failing subject(s) this term. Proceed with promotion anyway?`))return;
+    const classes=await dbGetAll('classes');
+    const ALL_LVL=['Creche','Nursery 1','Nursery 2','KG 1','KG 2','Basic 1','Basic 2','Basic 3','Basic 4','Basic 5','Basic 6','JHS 1','JHS 2','JHS 3'];
+    const curClass=classes.find(c=>c.id===student.classId);
+    if(!curClass)return;
+    const curIdx=ALL_LVL.indexOf(curClass.level||curClass.name);
+    if(curIdx<0||curIdx>=ALL_LVL.length-1)return; // already at top
+    const nextLevel=ALL_LVL[curIdx+1];
+    const nextClass=classes.find(c=>(c.level||c.name)===nextLevel);
+    if(!nextClass)return;
+    await dbAdd('transfer_log',{studentId:student.id,studentName:student.name,fromClassId:student.classId,toClassId:nextClass.id,reason:'Admin-verified promotion',date:new Date().toISOString().slice(0,10),doneBy:currentUser.id});
+    student.classId=nextClass.id;student.updatedAt=new Date().toISOString();
+    await dbPut('students',student);
+    await audit('PROMOTE_STUDENT',`${student.name} promoted to ${nextClass.name}`);
+  }catch(e){console.error('Promotion error:',e);}
+}
+
+// Admin can also approve/reject pending teacher recommendations from reports page
+async function adminApprovePromotion(studentId,term,year,approve){
+  if(currentUser.role!=='admin'){toast('Only admin can verify promotions','error');return;}
+  const allRemarks=await dbGetAll('remarks');
+  const remark=allRemarks.find(r=>r.studentId===studentId&&r.term===term&&r.academicYear===year);
+  if(!remark){toast('No remark found','error');return;}
+  const newPromo=approve?'yes':'no';
+  remark.promoted=newPromo;
+  remark.promotionVerifiedBy=currentUser.name;
+  remark.promotionVerifiedRole='admin';
+  remark.promotionUpdatedAt=new Date().toISOString();
+  await dbPut('remarks',remark);
+  if(approve) await executeClassPromotion(studentId);
+  await audit('VERIFY_PROMOTION',`Admin ${approve?'approved':'rejected'} promotion for student ${studentId}`);
+  toast(`Promotion ${approve?'approved':'rejected'} and student moved`,'success');
+  loadReportList();
 }
 
 async function buildReport(studentId,term,year){
@@ -2610,6 +3008,7 @@ function renderRC(data){
   const{student,cls,subjRows,avg,agg,rank,classSize,remark,att,term,year}=data;
   return`<div class="rc">
     <div class="rc-hdr">
+      ${cfg.schoolLogo?'<img src="'+cfg.schoolLogo+'" class="rc-logo" alt="School Logo" style="width:60px;height:60px;object-fit:contain;margin-bottom:6px;display:block;margin-left:auto;margin-right:auto">':'<div style=\"font-size:32px;text-align:center;margin-bottom:4px\">🏫</div>'}
       ${student.photo?`<img src="${student.photo}" class="rc-photo" alt="${student.name}">`:''}
       <div class="rc-school">${cfg.schoolName}</div>
       ${cfg.schoolMotto?`<div class="rc-addr" style="font-style:italic">"${cfg.schoolMotto}"</div>`:''}
@@ -2650,7 +3049,14 @@ function renderRC(data){
       <p><strong>Class Teacher's Remarks:</strong></p><div class="rc-rmk-box">${remark.teacherRemark||''}</div>
       <p><strong>Headmaster's Remarks:</strong></p><div class="rc-rmk-box">${remark.headRemark||''}</div>
     </div>
-    <div class="rc-promo">${remark.promoted==='yes'?'PROMOTED TO NEXT CLASS':remark.promoted==='no'?'TO REPEAT CURRENT CLASS':'PROMOTION STATUS: PENDING'}</div>
+    <div class="rc-promo">${(()=>{
+      const p=remark.promoted;
+      if(p==='yes') return 'PROMOTED TO NEXT CLASS ✅';
+      if(p==='no') return 'TO REPEAT CURRENT CLASS 🔁';
+      if(p==='recommended_yes') return 'PROMOTION RECOMMENDED — Awaiting Admin ⏳';
+      if(p==='recommended_no') return 'REPEAT RECOMMENDED — Awaiting Admin ⏳';
+      return 'PROMOTION STATUS: PENDING';
+    })()}</div>
     <div class="rc-sigs">
       <div><div class="line">Class Teacher</div></div>
       <div><div class="line">Headmaster / Headmistress</div></div>
@@ -2696,9 +3102,31 @@ async function printOne(studentId){
 async function printAll(){
   const students=await dbGetAll('students');
   const term=document.getElementById('rpt-term').value,year=document.getElementById('rpt-year').value;
-  const classStudents=students.filter(s=>s.classId==rptClassId);
-  let html='';for(const st of classStudents){const data=await buildReport(st.id,term,year);html+=renderRC(data);}
-  document.getElementById('print-area').innerHTML=html;window.print();
+  const classStudents=students.filter(s=>s.classId==rptClassId&&s.status!=='graduated');
+  if(!classStudents.length){toast('No students in this class','error');return;}
+  
+  // Show progress
+  const mc=document.getElementById('main-content');
+  const progDiv=document.getElementById('bulk-print-progress')||document.createElement('div');
+  progDiv.id='bulk-print-progress';
+  progDiv.className='print-progress';
+  progDiv.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between"><span>🖨️ Preparing bulk print…</span><span id="bulk-prog-count">0/${classStudents.length}</span></div><div class="print-progress-bar"><div class="print-progress-fill" id="bulk-prog-bar" style="width:0%"></div></div>`;
+  mc.prepend(progDiv);
+  
+  let html='';
+  for(let i=0;i<classStudents.length;i++){
+    const st=classStudents[i];
+    const data=await buildReport(st.id,term,year);
+    html+=renderRC(data);
+    const pct=Math.round((i+1)/classStudents.length*100);
+    const bar=document.getElementById('bulk-prog-bar');const cnt=document.getElementById('bulk-prog-count');
+    if(bar)bar.style.width=pct+'%';
+    if(cnt)cnt.textContent=`${i+1}/${classStudents.length}`;
+  }
+  document.getElementById('print-area').innerHTML=html;
+  progDiv.remove();
+  await audit('BULK_PRINT',`Bulk print: ${classStudents.length} cards for ${term} ${year}`);
+  window.print();
 }
 
 // ═══════════════════════════════════════════
@@ -2745,10 +3173,17 @@ function openCreateUserModal(){
     `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="createUser()">Create</button>`
   );
 }
+async function hashPassword(pw){
+  const encoder=new TextEncoder();
+  const data=encoder.encode(pw);
+  const hashBuffer=await crypto.subtle.digest('SHA-256',data);
+  const hashArray=Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 async function createUser(){
   const name=document.getElementById('cu-name').value.trim(),username=document.getElementById('cu-username').value.trim(),email=document.getElementById('cu-email').value.trim(),password=document.getElementById('cu-pw').value,role=document.getElementById('cu-role').value;
   if(!name||!username||!password||!email)return alert('All fields required');
-  try{await dbAdd('users',{name,username,password,email,role,status:'active',createdAt:new Date().toISOString()});await audit('CREATE_USER',`${name} (${role})`);toast('User created','success');closeModal();pgUsers();}
+  const hpw=await hashPassword(password);try{await dbAdd('users',{name,username,password:hpw,email,role,status:'active',createdAt:new Date().toISOString()});await audit('CREATE_USER',`${name} (${role})`);toast('User created','success');closeModal();pgUsers();}
   catch(e){alert('Username already taken');}
 }
 
@@ -2767,6 +3202,13 @@ async function pgSettings(){
         <div class="fg"><label>Motto</label><input type="text" id="cfg-motto" value="${cfg.schoolMotto||''}"></div>
         <div class="fg"><label>Address</label><input type="text" id="cfg-addr" value="${cfg.schoolAddress||''}"></div>
         <div class="fg"><label>Phone</label><input type="tel" id="cfg-phone" value="${cfg.schoolPhone||''}"></div>
+        <div class="fg"><label>School Logo (shown on report cards)</label>
+          ${cfg.schoolLogo?'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><img src="'+cfg.schoolLogo+'" style="width:52px;height:52px;object-fit:contain;border-radius:8px;border:1px solid var(--gray-200)"><button class="btn btn-sm btn-danger" onclick="removeSchoolLogo()">Remove Logo</button></div>':''}
+          <div class="photo-upload-area" style="padding:12px">
+            <input type="file" accept="image/*" onchange="uploadSchoolLogo(this)">
+            <div style="font-size:12px;color:var(--gray-400)">📷 Click to upload school logo (PNG, JPG)</div>
+          </div>
+        </div>
         <button class="btn btn-primary" onclick="saveSchoolCfg()">Save School Info</button>
       </div></div>
 
@@ -2814,6 +3256,31 @@ async function pgSettings(){
         <button class="btn" onclick="loadDefaultClasses()">🏷️ Load Default Classes (Preschool–JHS 3)</button>
         <button class="btn" onclick="loadGESSubjects()">📚 Load GES Subjects</button>
       </div></div>
+
+      <div class="card"><div class="card-header"><h3>📲 SMS / WhatsApp Alerts</h3></div><div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+        <div class="info-box" style="margin-bottom:0">Configure SMS/WhatsApp provider for fee alerts, attendance warnings, and term results. Supports Africa's Talking, Twilio, or WhatsApp Business API.</div>
+        <div class="fg"><label>SMS Provider</label><select id="sms-provider"><option value="africastalking">Africa's Talking</option><option value="twilio">Twilio</option><option value="bulk">BulkSMS</option></select></div>
+        <div class="fg"><label>SMS API Key</label><input type="text" id="sms-apikey" value="${cfg.smsApiKey||''}" placeholder="Your SMS API key"></div>
+        <div class="fg"><label>SMS Sender ID</label><input type="text" id="sms-from" value="${cfg.smsFrom||''}" placeholder="e.g. SCHOOL or +233XXXXXXXXX"></div>
+        <div class="fg"><label style="display:flex;align-items:center;gap:8px">WhatsApp Business API Key <span class="alert-chip alert-chip-wa">WA</span></label><input type="text" id="wa-apikey" value="${cfg.waApiKey||''}" placeholder="WhatsApp API key"></div>
+        <div class="fg"><label>WhatsApp Phone Number ID</label><input type="text" id="wa-phone" value="${cfg.waPhoneId||''}" placeholder="Phone number ID from Meta"></div>
+        <button class="btn btn-primary" onclick="saveSmsConfig()">Save Alert Settings</button>
+      </div></div>
+
+      <div class="card"><div class="card-header"><h3>🌙 Appearance</h3></div><div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+        <div class="fg"><label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input type="checkbox" id="cfg-dark" ${darkMode?'checked':''} style="width:16px;height:16px" onchange="toggleDarkMode()">
+          Dark Mode (also toggleable via the moon 🌙 button in the header)
+        </label></div>
+        <div class="fg"><label>Interface Language</label>
+          <select id="cfg-lang" onchange="setLanguage(this.value)">
+            <option value="en" ${currentLang==='en'?'selected':''}>🌐 English</option>
+            <option value="fr" ${currentLang==='fr'?'selected':''}>🇫🇷 Français</option>
+            <option value="tw" ${currentLang==='tw'?'selected':''}>🇬🇭 Twi</option>
+            <option value="ha" ${currentLang==='ha'?'selected':''}>🌍 Hausa</option>
+          </select>
+        </div>
+      </div></div>
       `:''}
 
       <div class="card"><div class="card-header"><h3>👤 My Account</h3></div><div class="card-body" style="display:flex;flex-direction:column;gap:12px">
@@ -2854,16 +3321,34 @@ async function saveSchoolCfg(){
   await saveCfg('schoolMotto',document.getElementById('cfg-motto').value);
   await saveCfg('schoolAddress',document.getElementById('cfg-addr').value);
   await saveCfg('schoolPhone',document.getElementById('cfg-phone').value);
-  document.getElementById('topbar-school-name').textContent=cfg.schoolName;
+  // saveCfg updates cfg[key] so these are now current
+  const nameEl=document.getElementById('topbar-school-name');
+  if(nameEl)nameEl.innerHTML=cfg.schoolName.replace(' ','<br>');
   await audit('SETTINGS_SCHOOL','Updated school info');
   toast('School info saved','success');
 }
+async function uploadSchoolLogo(input){
+  if(!input.files||!input.files[0])return;
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    await saveCfg('schoolLogo',e.target.result);
+    toast('School logo uploaded','success');
+    pgSettings();
+  };reader.readAsDataURL(input.files[0]);
+}
+async function removeSchoolLogo(){
+  await saveCfg('schoolLogo','');
+  toast('Logo removed');pgSettings();
+}
 async function saveAcademicCfg(){
+  const csmax=parseInt(document.getElementById('cfg-csmax').value)||30;
+  const esmax=parseInt(document.getElementById('cfg-esmax').value)||70;
+  if(csmax+esmax!==100){toast('Class Score Max + Exam Score Max must sum to 100.','error');return;}
   await saveCfg('academicYear',document.getElementById('cfg-year').value);
   await saveCfg('currentTerm',document.getElementById('cfg-term').value);
   await saveCfg('gradingSystem',document.getElementById('cfg-grading').value);
-  await saveCfg('classScoreMax',parseInt(document.getElementById('cfg-csmax').value)||30);
-  await saveCfg('examScoreMax',parseInt(document.getElementById('cfg-esmax').value)||70);
+  await saveCfg('classScoreMax',csmax);
+  await saveCfg('examScoreMax',esmax);
   await saveCfg('passThreshold',parseInt(document.getElementById('cfg-pass').value)||50);
   await saveCfg('bestXSubjects',parseInt(document.getElementById('cfg-bestx').value)||0);
   await audit('SETTINGS_ACADEMIC','Updated academic settings');
@@ -2891,10 +3376,11 @@ async function saveAccountInfo(){
 }
 async function changePassword(){
   const old=document.getElementById('pw-old').value,nw=document.getElementById('pw-new').value,conf=document.getElementById('pw-confirm').value;
-  if(currentUser.password!==old)return toast('Current password incorrect','error');
+  const hashedOld=await hashPassword(old);
+  if(currentUser.password!==hashedOld&&currentUser.password!==old)return toast('Current password incorrect','error');
   if(nw!==conf)return toast('Passwords do not match','error');
   if(nw.length<6)return toast('Minimum 6 characters','error');
-  currentUser.password=nw;await dbPut('users',currentUser);toast('Password updated','success');
+  const hashedNew=await hashPassword(nw);currentUser.password=hashedNew;await dbPut('users',currentUser);toast('Password updated','success');
 }
 async function loadDefaultClasses(){
   const defaults=ALL_LEVELS.map(l=>({name:l,level:l}));
@@ -3114,14 +3600,14 @@ async function pgNotices(){
               <div style="flex:1">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
                   ${n.pinned?`<span style="font-size:14px">📌</span>`:''}
-                  <h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--navy)">${n.title}</h3>
-                  <span class="badge ${n.priority==='urgent'?'badge-red':n.priority==='important'?'badge-amber':'badge-teal'}">${n.priority||'normal'}</span>
-                  <span class="badge badge-navy">${targetLabel}</span>
+                  <h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--navy)">${escHtml(n.title)}</h3>
+                  <span class="badge ${n.priority==='urgent'?'badge-red':n.priority==='important'?'badge-amber':'badge-teal'}">${escHtml(n.priority||'normal')}</span>
+                  <span class="badge badge-navy">${escHtml(targetLabel)}</span>
                   ${!isRead?`<span class="badge badge-gold">NEW</span>`:''}
                 </div>
-                <p style="font-size:13px;color:var(--gray-600);line-height:1.6;white-space:pre-wrap">${n.body}</p>
+                <p style="font-size:13px;color:var(--gray-600);line-height:1.6;white-space:pre-wrap">${escHtml(n.body)}</p>
                 <div style="margin-top:10px;font-size:11px;color:var(--gray-400)">
-                  Posted by <strong>${author?author.name:'Unknown'}</strong> · ${new Date(n.createdAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+                  Posted by <strong>${escHtml(author?author.name:'Unknown')}</strong> · ${new Date(n.createdAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
                 </div>
               </div>
               ${isAdmin?`<div style="display:flex;gap:4px;flex-shrink:0">
@@ -3263,15 +3749,15 @@ async function openThread(userId){
   const panel=document.getElementById('msg-panel');if(!panel)return;
   panel.innerHTML=`
     <div class="card-header" style="flex-shrink:0">
-      <h3>${other?other.name:'User'}</h3>
-      <span class="badge ${other&&other.role==='teacher'?'badge-teal':'badge-navy'}">${other?other.role:''}</span>
+      <h3>${escHtml(other?other.name:'User')}</h3>
+      <span class="badge ${other&&other.role==='teacher'?'badge-teal':'badge-navy'}">${escHtml(other?other.role:'')}</span>
     </div>
     <div id="msg-thread" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px">
       ${threadMsgs.length===0?`<div style="text-align:center;color:var(--gray-400);font-size:13px;margin:auto">No messages yet — start the conversation!</div>`:''}
       ${threadMsgs.map(m=>{
         const isMine=m.fromUserId===currentUser.id;
         return`<div style="display:flex;flex-direction:column;align-items:${isMine?'flex-end':'flex-start'}">
-          <div style="max-width:70%;background:${isMine?'var(--navy)':'var(--gray-100)'};color:${isMine?'white':'var(--gray-800)'};padding:10px 14px;border-radius:${isMine?'12px 12px 2px 12px':'12px 12px 12px 2px'};font-size:13px;line-height:1.5">${m.body}</div>
+          <div style="max-width:70%;background:${isMine?'var(--navy)':'var(--gray-100)'};color:${isMine?'white':'var(--gray-800)'};padding:10px 14px;border-radius:${isMine?'12px 12px 2px 12px':'12px 12px 12px 2px'};font-size:13px;line-height:1.5">${escHtml(m.body)}</div>
           <div style="font-size:10px;color:var(--gray-400);margin-top:3px">${new Date(m.createdAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${new Date(m.createdAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</div>
         </div>`;
       }).join('')}
@@ -3745,11 +4231,882 @@ async function saveSecurityCfg(){
 //  INIT
 // ═══════════════════════════════════════════
 async function init(){
+  // Guard: fail fast and clearly if Supabase credentials have not been configured
+  if(!SUPABASE_URL||!SUPABASE_ANON_KEY){
+    document.body.innerHTML=`<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0F1F3D;font-family:'Outfit',sans-serif">
+      <div style="background:#fff;border-radius:16px;padding:40px 48px;max-width:480px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.4)">
+        <div style="font-size:48px;margin-bottom:16px">⚙️</div>
+        <h2 style="color:#0F1F3D;font-size:20px;margin-bottom:12px">Supabase Not Configured</h2>
+        <p style="color:#5A5A52;font-size:14px;line-height:1.7">Set <code style="background:#F5F5F2;padding:2px 6px;border-radius:4px">window.SUPABASE_URL</code> and <code style="background:#F5F5F2;padding:2px 6px;border-radius:4px">window.SUPABASE_ANON_KEY</code> at the top of <strong>index.html</strong> before deploying.<br><br>Never commit real credentials to source control — use your hosting platform's environment variable injection.</p>
+      </div>
+    </div>`;
+    return;
+  }
   await initDB();
   await seedAdmin();
   await loadConfig();
+  initTheme();
 }
 init();
+
+// ═══════════════════════════════════════════
+//  DATA MANAGEMENT PAGE
+// ═══════════════════════════════════════════
+async function pgDataManagement(){
+  const main=document.getElementById('main-content');
+  main.innerHTML=`<div class="page-header"><div><h2>🗄️ Data Management</h2><p>Export, clear or delete records. All actions are permanent.</p></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px">
+
+    <!-- EXPORT SECTION -->
+    <div class="card">
+      <div class="card-header"><h3>📤 Export Data</h3></div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+        <button class="btn btn-primary" onclick="exportCSV('students')">Export Students (CSV)</button>
+        <button class="btn btn-primary" onclick="exportCSV('scores')">Export Scores (CSV)</button>
+        <button class="btn btn-primary" onclick="exportCSV('attendance')">Export Attendance (CSV)</button>
+        <button class="btn btn-primary" onclick="exportCSV('users')">Export Users (CSV)</button>
+        <button class="btn btn-primary" onclick="exportCSV('subjects')">Export Subjects (CSV)</button>
+        <button class="btn btn-primary" onclick="exportCSV('classes')">Export Classes (CSV)</button>
+        <button class="btn btn-primary" onclick="exportCSV('remarks')">Export Remarks (CSV)</button>
+        <button class="btn btn-primary" onclick="exportCSV('notices')">Export Notices (CSV)</button>
+        <button class="btn btn-primary" onclick="exportCSV('fees')">Export Fees (CSV)</button>
+        <button class="btn btn-primary" onclick="exportCSV('awards')">Export Awards (CSV)</button>
+        <button class="btn btn-primary" onclick="exportCSV('timetables')">Export Timetable (CSV)</button>
+        <button class="btn btn-primary" onclick="exportCSV('events')">Export Calendar Events (CSV)</button>
+      </div>
+    </div>
+
+    <!-- CLEAR SECTION -->
+    <div class="card">
+      <div class="card-header"><h3>🧹 Clear Records by Term</h3></div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+        <div class="fg">
+          <label>Term</label>
+          <select id="dm-term" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:6px;font-family:Outfit,sans-serif">
+            <option value="Term 1">Term 1</option>
+            <option value="Term 2">Term 2</option>
+            <option value="Term 3">Term 3</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Academic Year</label>
+          <input type="text" id="dm-year" value="${cfg.academicYear||'2024/2025'}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:6px;font-family:Outfit,sans-serif">
+        </div>
+        <button class="btn" style="background:#fff3cd;color:#856404;border:1px solid #ffc107" onclick="clearByTerm('scores')">Clear Scores for Term</button>
+        <button class="btn" style="background:#fff3cd;color:#856404;border:1px solid #ffc107" onclick="clearByTerm('attendance')">Clear Attendance for Term</button>
+        <button class="btn" style="background:#fff3cd;color:#856404;border:1px solid #ffc107" onclick="clearByTerm('remarks')">Clear Remarks for Term</button>
+        <button class="btn" style="background:#fff3cd;color:#856404;border:1px solid #ffc107" onclick="clearByTerm('score_work_scores')">Clear Classwork Scores for Term</button>
+      </div>
+    </div>
+
+    <!-- DELETE SECTION -->
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-header"><h3>🗑️ Delete All Records in a Table</h3></div>
+      <div style="padding:16px">
+        <p style="color:#856404;background:#fff3cd;padding:10px;border-radius:6px;font-size:13px;margin-bottom:14px">⚠️ Warning: This permanently deletes ALL records in the selected table. This cannot be undone.</p>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+          <button class="btn" style="background:#f8d7da;color:#721c24;border:1px solid #f5c6cb" onclick="clearTable('scores')">Delete All Scores</button>
+          <button class="btn" style="background:#f8d7da;color:#721c24;border:1px solid #f5c6cb" onclick="clearTable('attendance')">Delete All Attendance</button>
+          <button class="btn" style="background:#f8d7da;color:#721c24;border:1px solid #f5c6cb" onclick="clearTable('daily_attendance')">Delete Daily Attendance</button>
+          <button class="btn" style="background:#f8d7da;color:#721c24;border:1px solid #f5c6cb" onclick="clearTable('remarks')">Delete All Remarks</button>
+          <button class="btn" style="background:#f8d7da;color:#721c24;border:1px solid #f5c6cb" onclick="clearTable('notices')">Delete All Notices</button>
+          <button class="btn" style="background:#f8d7da;color:#721c24;border:1px solid #f5c6cb" onclick="clearTable('messages')">Delete All Messages</button>
+          <button class="btn" style="background:#f8d7da;color:#721c24;border:1px solid #f5c6cb" onclick="clearTable('audit_log')">Delete Audit Log</button>
+          <button class="btn" style="background:#f8d7da;color:#721c24;border:1px solid #f5c6cb" onclick="clearTable('transfer_log')">Delete Transfer Log</button>
+        </div>
+      </div>
+    </div>
+
+  </div>`;
+}
+
+async function exportCSV(store){
+  try{
+    const tableMap={students:'students',scores:'scores',attendance:'attendance',
+      users:'users',subjects:'subjects',classes:'classes',remarks:'remarks',notices:'notices'};
+    const tbl=tableMap[store]||store;
+    const rows=await sbReq('GET',tbl,null,'limit=50000');
+    if(!rows||!rows.length){toast('No data to export','error');return;}
+    const headers=Object.keys(rows[0]);
+    const csv=[headers.join(','),...rows.map(r=>headers.map(h=>{
+      const v=r[h]===null||r[h]===undefined?'':String(r[h]);
+      return v.includes(',')||v.includes('"')||v.includes('\n')?'"'+v.replace(/"/g,'""')+'"':v;
+    }).join(','))].join('\n');
+    const blob=new Blob([csv],{type:'text/csv'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=store+'_export_'+new Date().toISOString().slice(0,10)+'.csv';
+    a.click();
+    toast(store+' exported successfully','success');
+    await audit('EXPORT',store+' data exported as CSV');
+  }catch(e){toast('Export failed: '+e.message,'error');}
+}
+
+async function clearByTerm(store){
+  const term=document.getElementById('dm-term').value;
+  const year=document.getElementById('dm-year').value.trim();
+  if(!term||!year){toast('Please select a term and year','error');return;}
+  if(!confirm('Delete all '+store+' records for '+term+' '+year+'? This cannot be undone.'))return;
+  try{
+    await sbReq('DELETE',store,null,'term=eq.'+encodeURIComponent(term)+'&academic_year=eq.'+encodeURIComponent(year));
+    toast(store+' cleared for '+term+' '+year,'success');
+    await audit('CLEAR',store+' cleared for '+term+' '+year);
+  }catch(e){toast('Failed: '+e.message,'error');}
+}
+
+async function clearTable(tbl){
+  if(!confirm('DELETE ALL records in '+tbl+'? This is permanent and cannot be undone.'))return;
+  if(!confirm('Are you absolutely sure? All '+tbl+' data will be lost forever.'))return;
+  try{
+    await sbReq('DELETE',tbl,null,'id=gte.0');
+    toast('All '+tbl+' records deleted','success');
+    await audit('DELETE_ALL','All records deleted from '+tbl);
+  }catch(e){toast('Failed: '+e.message,'error');}
+}
+
+
+// ═══════════════════════════════════════════
+//  PAGE: FEE MANAGEMENT
+// ═══════════════════════════════════════════
+async function pgParentFees(){
+  // Parent view of fees - read only, shows only their child's fee status
+  const mc=document.getElementById('main-content');
+  const student=await findMyStudent();
+  if(!student){
+    mc.innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><h4>Student not linked</h4><p>Contact your school admin to link your child to this account.</p></div>';
+    return;
+  }
+  const fees=await dbGetAll('fees').catch(()=>[]);
+  const myFees=fees.filter(f=>f.studentId===student.id);
+  mc.innerHTML=`
+    <div class="page-header"><div><h2>💰 Fee Status</h2><p>${student.name}</p></div></div>
+    ${myFees.length===0?'<div class="empty-state"><div class="empty-icon">💰</div><h4>No fee records yet</h4><p>Contact the school office for fee information.</p></div>':
+    myFees.map(f=>{
+      const bal=(f.amount||0)-(f.paid||0);
+      const status=bal<=0&&f.amount>0?'paid':f.paid>0?'partial':'unpaid';
+      return`<div class="card" style="margin-bottom:16px;max-width:600px">
+        <div class="card-header"><h3>${f.term} · ${f.academicYear}</h3>
+          <span class="badge ${status==='paid'?'badge-green':status==='partial'?'badge-amber':'badge-red'}">${status.toUpperCase()}</span>
+        </div>
+        <div class="card-body">
+          <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
+            <div class="stat-card"><div class="stat-label">Expected</div><div class="stat-value" style="font-size:20px">GH₵${(f.amount||0).toLocaleString()}</div></div>
+            <div class="stat-card"><div class="stat-label">Paid</div><div class="stat-value" style="font-size:20px;color:var(--green)">GH₵${(f.paid||0).toLocaleString()}</div></div>
+            <div class="stat-card"><div class="stat-label">Balance</div><div class="stat-value" style="font-size:20px;color:${bal>0?'var(--red)':'var(--green)'}">GH₵${Math.max(0,bal).toLocaleString()}</div></div>
+          </div>
+          ${f.lastPayDate?`<p style="font-size:12px;color:var(--gray-400);margin-top:8px">Last payment: GH₵${(f.lastPayment||0).toLocaleString()} on ${f.lastPayDate} via ${f.method||'—'}</p>`:''}
+        </div>
+      </div>`;
+    }).join('')}`;
+}
+
+async function pgFees(){
+  if(currentUser.role==='parent'){pgParentFees();return;}
+  const mc=document.getElementById('main-content');
+  const[students,classes]=await Promise.all([dbGetAll('students'),dbGetAll('classes')]);
+  const fees=await dbGetAll('fees').catch(()=>[]);
+  
+  let feesByClass={};
+  students.forEach(s=>{
+    const cls=classes.find(c=>c.id===s.classId);
+    const clsName=cls?cls.name:'Unassigned';
+    if(!feesByClass[clsName])feesByClass[clsName]=[];
+    const stFee=fees.find(f=>f.studentId===s.id&&f.term===cfg.currentTerm&&f.academicYear===cfg.academicYear)||{amount:0,paid:0,status:'unpaid'};
+    feesByClass[clsName].push({...s,fee:stFee});
+  });
+
+  const totalCollected=fees.filter(f=>f.term===cfg.currentTerm&&f.academicYear===cfg.academicYear).reduce((s,f)=>s+(f.paid||0),0);
+  const totalExpected=fees.filter(f=>f.term===cfg.currentTerm&&f.academicYear===cfg.academicYear).reduce((s,f)=>s+(f.amount||0),0);
+  const outstanding=totalExpected-totalCollected;
+
+  mc.innerHTML=`
+    <div class="page-header">
+      <div><h2>💰 Fee Management</h2><p>${cfg.currentTerm} · ${cfg.academicYear}</p></div>
+      <div class="page-header-actions">
+        <button class="btn btn-gold" onclick="openFeeSetupModal()">⚙️ Set Fee Amounts</button>
+        <button class="btn btn-success" onclick="recordFeePayment()">+ Record Payment</button>
+        <button class="btn" onclick="exportCSV('fees')">📤 Export</button>
+      </div>
+    </div>
+    <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
+      <div class="stat-card navy"><div class="stat-icon">💵</div><div class="stat-label">Expected Total</div><div class="stat-value">GH₵${totalExpected.toLocaleString()}</div></div>
+      <div class="stat-card gold"><div class="stat-icon">✅</div><div class="stat-label">Collected</div><div class="stat-value">GH₵${totalCollected.toLocaleString()}</div></div>
+      <div class="stat-card" style="border-left:4px solid var(--red)"><div class="stat-icon">⚠️</div><div class="stat-label">Outstanding</div><div class="stat-value" style="color:var(--red)">GH₵${outstanding.toLocaleString()}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Fee Status by Student</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="search-input" placeholder="Search student…" id="fee-search" oninput="filterFeeTable()" style="width:200px">
+          <select class="filter-select" id="fee-status-filter" onchange="filterFeeTable()">
+            <option value="">All Status</option><option value="paid">Paid</option><option value="partial">Partial</option><option value="unpaid">Unpaid</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap"><table id="fee-table">
+        <thead><tr><th>Student</th><th>Class</th><th>Expected</th><th>Paid</th><th>Balance</th><th>Status</th><th></th></tr></thead>
+        <tbody>${students.map(s=>{
+          const cls=classes.find(c=>c.id===s.classId);
+          const f=fees.find(ff=>ff.studentId===s.id&&ff.term===cfg.currentTerm&&ff.academicYear===cfg.academicYear)||{amount:0,paid:0};
+          const bal=(f.amount||0)-(f.paid||0);
+          const status=bal<=0&&f.amount>0?'paid':f.paid>0?'partial':'unpaid';
+          return `<tr data-name="${s.name.toLowerCase()}" data-status="${status}">
+            <td>${nameCell(s.name)}</td>
+            <td>${cls?cls.name:'—'}</td>
+            <td>GH₵${(f.amount||0).toLocaleString()}</td>
+            <td>GH₵${(f.paid||0).toLocaleString()}</td>
+            <td><strong style="color:${bal>0?'var(--red)':'var(--green)'}">GH₵${Math.abs(bal).toLocaleString()}</strong></td>
+            <td><span class="badge ${status==='paid'?'badge-green':status==='partial'?'badge-amber':'badge-red'}">${status}</span></td>
+            <td><button class="btn btn-sm btn-primary" onclick="openStudentFeeModal(${s.id})">💳 Pay</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>`;
+}
+
+function filterFeeTable(){
+  const q=(document.getElementById('fee-search').value||'').toLowerCase();
+  const st=document.getElementById('fee-status-filter').value;
+  document.querySelectorAll('#fee-table tbody tr').forEach(tr=>{
+    const name=tr.dataset.name||'';const status=tr.dataset.status||'';
+    tr.style.display=((!q||name.includes(q))&&(!st||status===st))?'':'none';
+  });
+}
+
+async function openFeeSetupModal(){
+  const classes=await dbGetAll('classes');
+  openModal('⚙️ Set Fee Amounts',`
+    <div class="info-box">Set expected fee amounts per class for ${cfg.currentTerm} · ${cfg.academicYear}</div>
+    <div style="display:flex;flex-direction:column;gap:10px;max-height:400px;overflow-y:auto">
+    ${classes.map(c=>`<div class="fg" style="flex-direction:row;align-items:center;justify-content:space-between">
+      <label style="flex:1">${c.name}</label>
+      <input type="number" id="fee-cls-${c.id}" placeholder="0.00" style="width:140px;padding:8px;border:1.5px solid var(--gray-200);border-radius:6px;font-family:Outfit,sans-serif" value="">
+    </div>`).join('')}
+    </div>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveFeeAmounts()">Apply to All Students</button>`
+  );
+}
+
+async function saveFeeAmounts(){
+  const[students,classes]=await Promise.all([dbGetAll('students'),dbGetAll('classes')]);
+  const fees=await dbGetAll('fees').catch(()=>[]);
+  let updated=0;
+  for(const cls of classes){
+    const inp=document.getElementById('fee-cls-'+cls.id);
+    if(!inp||!inp.value)continue;
+    const amt=parseFloat(inp.value)||0;
+    const clsStudents=students.filter(s=>s.classId===cls.id);
+    for(const st of clsStudents){
+      const ex=fees.find(f=>f.studentId===st.id&&f.term===cfg.currentTerm&&f.academicYear===cfg.academicYear);
+      if(ex){ex.amount=amt;await dbPut('fees',ex);}
+      else await dbAdd('fees',{studentId:st.id,studentName:st.name,classId:cls.id,term:cfg.currentTerm,academicYear:cfg.academicYear,amount:amt,paid:0,status:'unpaid',updatedAt:new Date().toISOString()});
+      updated++;
+    }
+  }
+  await audit('FEE_SETUP',`Fee amounts set for ${updated} students`);
+  toast(`Fee amounts set for ${updated} students`,'success');
+  closeModal();pgFees();
+}
+
+async function openStudentFeeModal(studentId){
+  const[student,fees]=await Promise.all([dbGet('students',studentId),dbGetAll('fees').catch(()=>[])]);
+  const fee=fees.find(f=>f.studentId===studentId&&f.term===cfg.currentTerm&&f.academicYear===cfg.academicYear)||{amount:0,paid:0};
+  const bal=(fee.amount||0)-(fee.paid||0);
+  openModal(`💳 Record Payment — ${student.name}`,`
+    <div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+      <div class="stat-card"><div class="stat-label">Expected</div><div class="stat-value" style="font-size:20px">GH₵${(fee.amount||0).toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">Paid</div><div class="stat-value" style="font-size:20px;color:var(--green)">GH₵${(fee.paid||0).toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">Balance</div><div class="stat-value" style="font-size:20px;color:var(--red)">GH₵${Math.max(0,bal).toLocaleString()}</div></div>
+    </div>
+    <div class="form-grid">
+      <div class="fg"><label>Payment Amount (GH₵)</label><input type="number" id="fee-pay-amt" placeholder="0.00" min="0"></div>
+      <div class="fg"><label>Payment Date</label><input type="date" id="fee-pay-date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="fg full"><label>Payment Method</label><select id="fee-pay-method"><option>Cash</option><option>Mobile Money</option><option>Bank Transfer</option><option>Cheque</option></select></div>
+      <div class="fg full"><label>Notes/Receipt #</label><input type="text" id="fee-pay-notes" placeholder="Receipt number or notes…"></div>
+    </div>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="recordStudentPayment(${studentId})">✅ Record Payment</button>`
+  );
+}
+
+async function recordStudentPayment(studentId){
+  const amt=parseFloat(document.getElementById('fee-pay-amt').value)||0;
+  if(amt<=0){toast('Enter a valid amount','error');return;}
+  const fees=await dbGetAll('fees').catch(()=>[]);
+  const fee=fees.find(f=>f.studentId===studentId&&f.term===cfg.currentTerm&&f.academicYear===cfg.academicYear);
+  const method=document.getElementById('fee-pay-method').value;
+  const notes=document.getElementById('fee-pay-notes').value;
+  const date=document.getElementById('fee-pay-date').value;
+  if(fee){
+    fee.paid=(fee.paid||0)+amt;fee.lastPayment=amt;fee.lastPayDate=date;fee.method=method;fee.notes=notes;fee.updatedAt=new Date().toISOString();
+    const bal=(fee.amount||0)-fee.paid;fee.status=bal<=0?'paid':fee.paid>0?'partial':'unpaid';
+    await dbPut('fees',fee);
+  } else {
+    await dbAdd('fees',{studentId,term:cfg.currentTerm,academicYear:cfg.academicYear,amount:0,paid:amt,lastPayment:amt,lastPayDate:date,method,notes,status:'partial',updatedAt:new Date().toISOString()});
+  }
+  await audit('FEE_PAYMENT',`GH₵${amt} recorded for student ${studentId} via ${method}`);
+  toast(`GH₵${amt.toLocaleString()} recorded successfully`,'success');
+  closeModal();pgFees();
+  // SMS/WA alert placeholder
+  sendFeeAlert(studentId,amt);
+}
+
+async function sendFeeAlert(studentId,amt){
+  const student=await dbGet('students',studentId).catch(()=>null);
+  if(!student||!student.parentPhone)return;
+  const msg=`${cfg.schoolName}: GH\u20B5${amt.toLocaleString()} fee payment recorded for ${student.name}. Balance: GH\u20B5${Math.max(0,(student._feeBalance||0)).toLocaleString()}. Thank you.`;
+  await sendBulkSmsAlert(msg,student.parentPhone);
+}
+
+async function recordFeePayment(){
+  // Requires a specific student to be selected — prompt admin to use the fee table
+  toast('Please click "Record Payment" next to a specific student in the fee table.','info');
+}
+
+// ═══════════════════════════════════════════
+//  PAGE: SCHOOL CALENDAR / EVENTS
+// ═══════════════════════════════════════════
+async function pgCalendar(){
+  const mc=document.getElementById('main-content');
+  const events=await dbGetAll('events').catch(()=>[]);
+  const isAdmin=currentUser.role==='admin';
+  const now=new Date();
+  const monthStart=new Date(now.getFullYear(),now.getMonth(),1);
+  const daysInMonth=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const firstDow=monthStart.getDay();
+  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const thisMonth=monthNames[now.getMonth()]+' '+now.getFullYear();
+
+  const calDays=[];
+  for(let i=0;i<firstDow;i++)calDays.push(null);
+  for(let d=1;d<=daysInMonth;d++)calDays.push(d);
+
+  const eventMap={};
+  events.forEach(e=>{
+    const start=e.date?e.date.slice(0,10):null;
+    if(!start)return;
+    const end=e.endDate?e.endDate.slice(0,10):start;
+    // Span event across all days from start to end
+    let cur=new Date(start);
+    const endD=new Date(end);
+    while(cur<=endD){
+      const ds=cur.toISOString().slice(0,10);
+      if(!eventMap[ds])eventMap[ds]=[];
+      eventMap[ds].push(e);
+      cur.setDate(cur.getDate()+1);
+    }
+  });
+
+  const upcoming=events.filter(e=>{
+    if(!e.date)return false;
+    const ed=new Date(e.date);return ed>=new Date();
+  }).sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,10);
+
+  mc.innerHTML=`
+    <div class="page-header">
+      <div><h2>📅 School Calendar</h2><p>${thisMonth}</p></div>
+      ${isAdmin?`<button class="btn btn-primary" onclick="openEventModal()">+ Add Event</button>`:''}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start">
+      <div class="card">
+        <div class="card-header"><h3>${thisMonth}</h3></div>
+        <div style="padding:16px">
+          <div class="cal-grid" style="margin-bottom:8px">
+            ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div style="text-align:center;font-size:11px;font-weight:600;color:var(--gray-400);padding:6px 0">${d}</div>`).join('')}
+          </div>
+          <div class="cal-grid">
+            ${calDays.map(d=>{
+              if(!d)return '<div></div>';
+              const dateStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+              const isToday=d===now.getDate();
+              const evs=eventMap[dateStr]||[];
+              return `<div class="cal-day ${isToday?'today':''} ${evs.length?'has-event':''}" onclick="showDayEvents('${dateStr}','${d}')">
+                <span style="font-size:13px;font-weight:${isToday?700:400}">${d}</span>
+                ${evs.length?'<span class="cal-event-dot"></span>':''}
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><h3>📌 Upcoming Events</h3></div>
+          <div style="padding:0">
+            ${upcoming.length===0?'<div class="empty-state" style="padding:30px"><p>No upcoming events</p></div>':
+              upcoming.map(e=>`<div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);display:flex;gap:12px;align-items:flex-start">
+                <div style="background:var(--navy);color:white;border-radius:8px;padding:6px 10px;text-align:center;font-size:11px;min-width:44px;flex-shrink:0">
+                  <div style="font-weight:700;font-size:16px">${e.date?new Date(e.date).getDate():''}</div>
+                  <div style="opacity:.7">${e.date?monthNames[new Date(e.date).getMonth()].slice(0,3):''}</div>
+                </div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:600;color:var(--navy)">${e.title||'Event'}</div>
+                  <div style="font-size:11px;color:var(--gray-400)">${e.type||''} ${e.description?'· '+e.description.slice(0,50):''}</div>
+                </div>
+                ${isAdmin?`<button class="btn btn-sm btn-danger" onclick="deleteEvent(${e.id})">✕</button>`:''}
+              </div>`).join('')}
+          </div>
+        </div>
+        <div id="day-events-panel"></div>
+      </div>
+    </div>`;
+}
+
+function showDayEvents(dateStr,day){
+  const panel=document.getElementById('day-events-panel');
+  if(!panel)return;
+  // Refresh from current events data
+  dbGetAll('events').catch(()=>[]).then(events=>{
+    const evs=events.filter(e=>e.date&&e.date.slice(0,10)===dateStr);
+    panel.innerHTML=`<div class="card"><div class="card-header"><h3>📅 ${dateStr}</h3>${currentUser.role==='admin'?`<button class="btn btn-sm btn-primary" onclick="openEventModal('${dateStr}')">+ Add</button>`:''}
+    </div><div style="padding:12px">${evs.length===0?'<p style="color:var(--gray-400);font-size:13px">No events this day.</p>':evs.map(e=>`<div style="padding:8px 0;border-bottom:1px solid var(--gray-100)"><strong>${e.title}</strong><div style="font-size:12px;color:var(--gray-400)">${e.type||''}</div><div style="font-size:12px">${e.description||''}</div></div>`).join('')}</div></div>`;
+  });
+}
+
+async function openEventModal(prefillDate=''){
+  openModal('Add Calendar Event',`
+    <div class="form-grid">
+      <div class="fg"><label>Event Title *</label><input type="text" id="evt-title" placeholder="e.g. Parent-Teacher Meeting"></div>
+      <div class="fg"><label>Date *</label><input type="date" id="evt-date" value="${prefillDate||new Date().toISOString().slice(0,10)}"></div>
+      <div class="fg"><label>End Date</label><input type="date" id="evt-end"></div>
+      <div class="fg"><label>Type</label><select id="evt-type"><option>Holiday</option><option>Exam</option><option>Meeting</option><option>Sports</option><option>Cultural</option><option>Other</option></select></div>
+      <div class="fg full"><label>Description</label><textarea id="evt-desc" style="min-height:70px" placeholder="Optional description…"></textarea></div>
+      <div class="fg full"><label>Target Audience</label><select id="evt-target"><option value="">Everyone</option><option value="teacher">Teachers Only</option><option value="parent">Parents Only</option></select></div>
+    </div>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveEvent()">Save Event</button>`
+  );
+}
+
+async function saveEvent(){
+  const title=document.getElementById('evt-title').value.trim();
+  const date=document.getElementById('evt-date').value;
+  if(!title||!date){toast('Title and date required','error');return;}
+  await dbAdd('events',{title,date,endDate:document.getElementById('evt-end').value,type:document.getElementById('evt-type').value,description:document.getElementById('evt-desc').value,target:document.getElementById('evt-target').value,createdBy:currentUser.id,createdAt:new Date().toISOString()});
+  await audit('ADD_EVENT',`Event: ${title} on ${date}`);
+  toast('Event added','success');closeModal();pgCalendar();
+}
+
+async function deleteEvent(id){
+  if(!confirm('Delete this event?'))return;
+  await dbDel('events',id);toast('Event deleted');pgCalendar();
+}
+
+// ═══════════════════════════════════════════
+//  PAGE: EXAM TIMETABLE
+// ═══════════════════════════════════════════
+async function pgTimetable(){
+  const mc=document.getElementById('main-content');
+  const isAdmin=currentUser.role==='admin';
+  const timetables=await dbGetAll('timetables').catch(()=>[]);
+  const classes=await dbGetAll('classes');
+  const subjects=await dbGetAll('subjects');
+  const curTT=timetables.filter(t=>t.term===cfg.currentTerm&&t.academicYear===cfg.academicYear);
+
+  mc.innerHTML=`
+    <div class="page-header">
+      <div><h2>📋 Exam Timetable</h2><p>${cfg.currentTerm} · ${cfg.academicYear}</p></div>
+      ${isAdmin?`<div class="page-header-actions">
+        <button class="btn btn-primary" onclick="openTimetableModal()">+ Add Slot</button>
+        <button class="btn" onclick="exportCSV('timetables')">📤 Export</button>
+      </div>`:''}
+    </div>
+    ${curTT.length===0?`<div class="empty-state"><div class="empty-icon">📋</div><h4>No timetable entries yet</h4><p>${isAdmin?'Click "+ Add Slot" to create the exam schedule':'Check back when the admin publishes the timetable'}</p></div>`:
+    `<div class="card"><div class="table-wrap"><table>
+      <thead><tr><th>Date</th><th>Time</th><th>Subject</th><th>Class</th><th>Venue</th><th>Duration</th>${isAdmin?'<th></th>':''}</tr></thead>
+      <tbody>${curTT.sort((a,b)=>a.date>b.date?1:-1).map(t=>{
+        const subj=subjects.find(s=>s.id===t.subjectId);
+        const cls=classes.find(c=>c.id===t.classId);
+        return`<tr><td><strong>${t.date||'—'}</strong></td><td>${t.startTime||'—'} – ${t.endTime||'—'}</td><td>${subj?subj.name:(t.subjectName||'—')}</td><td>${cls?cls.name:(t.className||'All Classes')}</td><td>${t.venue||'—'}</td><td>${t.duration||'—'}</td>${isAdmin?`<td><button class="btn btn-sm btn-danger" onclick="deleteTimetableSlot(${t.id})">✕</button></td>`:''}</tr>`;
+      }).join('')}</tbody>
+    </table></div></div>`}`;
+}
+
+async function openTimetableModal(){
+  const[classes,subjects]=await Promise.all([dbGetAll('classes'),dbGetAll('subjects')]);
+  openModal('Add Exam Slot',`
+    <div class="form-grid">
+      <div class="fg"><label>Date *</label><input type="date" id="tt-date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="fg"><label>Subject *</label><select id="tt-subj"><option value="">— Select —</option>${subjects.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
+      <div class="fg"><label>Start Time</label><input type="time" id="tt-start" value="08:00"></div>
+      <div class="fg"><label>End Time</label><input type="time" id="tt-end" value="10:00"></div>
+      <div class="fg"><label>Class</label><select id="tt-class"><option value="">All Classes</option>${classes.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+      <div class="fg"><label>Venue</label><input type="text" id="tt-venue" placeholder="e.g. Exam Hall A"></div>
+      <div class="fg"><label>Duration</label><input type="text" id="tt-dur" placeholder="e.g. 2 hours"></div>
+      <div class="fg"><label>Notes</label><input type="text" id="tt-notes" placeholder="Optional notes"></div>
+    </div>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveTimetableSlot()">Save Slot</button>`
+  );
+}
+
+async function saveTimetableSlot(){
+  const date=document.getElementById('tt-date').value;
+  const subjId=parseInt(document.getElementById('tt-subj').value)||null;
+  if(!date||!subjId){toast('Date and subject required','error');return;}
+  const classId=parseInt(document.getElementById('tt-class').value)||null;
+  await dbAdd('timetables',{date,subjectId:subjId,classId,startTime:document.getElementById('tt-start').value,endTime:document.getElementById('tt-end').value,venue:document.getElementById('tt-venue').value,duration:document.getElementById('tt-dur').value,notes:document.getElementById('tt-notes').value,term:cfg.currentTerm,academicYear:cfg.academicYear,createdBy:currentUser.id});
+  await audit('ADD_TIMETABLE',`Exam slot added: ${date}`);
+  toast('Slot added','success');closeModal();pgTimetable();
+}
+
+async function deleteTimetableSlot(id){if(!confirm('Delete this slot?'))return;await dbDel('timetables',id);toast('Deleted');pgTimetable();}
+
+// ═══════════════════════════════════════════
+//  PAGE: ACADEMIC AWARDS / HONOURS
+// ═══════════════════════════════════════════
+async function pgAwards(){
+  const mc=document.getElementById('main-content');
+  const isAdmin=currentUser.role==='admin';
+  const[awards,students,classes]=await Promise.all([dbGetAll('awards').catch(()=>[]),dbGetAll('students'),dbGetAll('classes')]);
+
+  mc.innerHTML=`
+    <div class="page-header">
+      <div><h2>🏆 Academic Awards & Honours</h2><p>${cfg.currentTerm} · ${cfg.academicYear}</p></div>
+      ${isAdmin?`<button class="btn btn-gold" onclick="openAwardModal()">🏅 Give Award</button>`:''}
+    </div>
+    ${awards.length===0?`<div class="empty-state"><div class="empty-icon">🏆</div><h4>No awards yet</h4><p>${isAdmin?'Give out your first academic award!':'Awards will appear here once given.'}</p></div>`:
+    `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+    ${awards.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)).map(a=>{
+      const st=students.find(s=>s.id===a.studentId);
+      const cls=classes.find(c=>c.id===(st?st.classId:null));
+      return`<div class="award-card">
+        <div style="font-size:32px;margin-bottom:8px">${a.icon||'🏆'}</div>
+        <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:4px">${a.title||'Award'}</div>
+        <div style="font-size:13px;color:var(--gold);font-weight:600;margin-bottom:8px">${st?st.name:'Unknown Student'}</div>
+        <div style="font-size:12px;color:var(--gray-400)">${cls?cls.name:'—'} · ${a.term||cfg.currentTerm} ${a.academicYear||cfg.academicYear}</div>
+        ${a.description?`<div style="font-size:12px;color:var(--gray-600);margin-top:6px;font-style:italic">${a.description}</div>`:''}
+        ${isAdmin?`<button class="btn btn-sm btn-danger" style="margin-top:10px" onclick="deleteAward(${a.id})">Remove</button>`:''}
+      </div>`;
+    }).join('')}</div>`}`;
+}
+
+async function openAwardModal(){
+  const[students,classes]=await Promise.all([dbGetAll('students'),dbGetAll('classes')]);
+  openModal('🏅 Give Academic Award',`
+    <div class="form-grid">
+      <div class="fg full"><label>Student *</label><select id="aw-student"><option value="">— Select Student —</option>
+        ${students.filter(s=>s.status!=='graduated').sort((a,b)=>a.name.localeCompare(b.name)).map(s=>{const c=classes.find(cc=>cc.id===s.classId);return`<option value="${s.id}">${s.name}${c?' ('+c.name+')':''}</option>`;}).join('')}
+      </select></div>
+      <div class="fg"><label>Award Title *</label><input type="text" id="aw-title" placeholder="e.g. Best in Mathematics"></div>
+      <div class="fg"><label>Award Icon</label><select id="aw-icon"><option value="🏆">🏆 Trophy</option><option value="🥇">🥇 Gold Medal</option><option value="⭐">⭐ Star</option><option value="📚">📚 Academic</option><option value="🎖️">🎖️ Merit</option><option value="🌟">🌟 Excellence</option></select></div>
+      <div class="fg"><label>Term</label><select id="aw-term"><option>Term 1</option><option ${cfg.currentTerm==='Term 2'?'selected':''}>Term 2</option><option ${cfg.currentTerm==='Term 3'?'selected':''}>Term 3</option></select></div>
+      <div class="fg"><label>Academic Year</label><input type="text" id="aw-year" value="${cfg.academicYear}"></div>
+      <div class="fg full"><label>Description</label><textarea id="aw-desc" style="min-height:60px" placeholder="Reason for this award…"></textarea></div>
+    </div>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="saveAward()">🏅 Give Award</button>`
+  );
+}
+
+async function saveAward(){
+  const studentId=parseInt(document.getElementById('aw-student').value)||null;
+  const title=document.getElementById('aw-title').value.trim();
+  if(!studentId||!title){toast('Student and title required','error');return;}
+  await dbAdd('awards',{studentId,title,icon:document.getElementById('aw-icon').value,description:document.getElementById('aw-desc').value,term:document.getElementById('aw-term').value,academicYear:document.getElementById('aw-year').value,givenBy:currentUser.id,givenByName:currentUser.name,createdAt:new Date().toISOString()});
+  await audit('GIVE_AWARD',`Award "${title}" given to student ${studentId}`);
+  toast('Award given!','success');closeModal();pgAwards();
+}
+async function deleteAward(id){if(!confirm('Remove this award?'))return;await dbDel('awards',id);toast('Award removed');pgAwards();}
+
+// ═══════════════════════════════════════════
+//  PAGE: STUDENT RANKINGS
+// ═══════════════════════════════════════════
+async function pgRankings(){
+  const mc=document.getElementById('main-content');
+  const[students,classes,subjects,scores]=await Promise.all([dbGetAll('students'),dbGetAll('classes'),dbGetAll('subjects'),dbGetAll('scores')]);
+  const term=cfg.currentTerm,year=cfg.academicYear;
+  
+  let classFilter=currentUser.role==='teacher'?null:null;
+  
+  mc.innerHTML=`
+    <div class="page-header">
+      <div><h2>🥇 Student Rankings</h2><p>${term} · ${year}</p></div>
+      <div class="page-header-actions">
+        <select class="filter-select" id="rank-class" onchange="renderRankings()">
+          <option value="">All Classes</option>
+          ${classes.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
+        </select>
+        <select class="filter-select" id="rank-top" onchange="renderRankings()">
+          <option value="10">Top 10</option><option value="20">Top 20</option><option value="50">Top 50</option><option value="0">All</option>
+        </select>
+        <button class="btn btn-primary" onclick="printRankings()">🖨️ Print</button>
+      </div>
+    </div>
+    <div id="rankings-content">
+      <div class="empty-state"><div class="empty-icon">📊</div><p>Select a class or view all</p></div>
+    </div>`;
+  
+  window._rankData={students,classes,subjects,scores,term,year};
+  renderRankings();
+}
+
+function renderRankings(){
+  const{students,classes,subjects,scores,term,year}=window._rankData||{};
+  if(!students)return;
+  const classId=parseInt(document.getElementById('rank-class').value)||null;
+  const topN=parseInt(document.getElementById('rank-top').value)||0;
+  
+  let filtered=students.filter(s=>s.status!=='graduated'&&(classId?s.classId===classId:true));
+  
+  const stuAvgMap={};
+  scores.filter(sc=>sc.term===term&&sc.academicYear===year&&sc.total!==null).forEach(sc=>{
+    const st=filtered.find(s=>s.id===sc.studentId);if(!st)return;
+    if(!stuAvgMap[st.id])stuAvgMap[st.id]={id:st.id,name:st.name,classId:st.classId,scores:[]};
+    stuAvgMap[st.id].scores.push(sc);
+  });
+  
+  const stuList=Object.values(stuAvgMap).map(d=>{
+    const best=selectBestSubjects(d.scores,cfg.bestXSubjects);
+    const avg=best.length>0?(best.reduce((s,sc)=>s+sc.total,0)/best.length):0;
+    const agg=best.reduce((s,sc)=>s+gradeNum(sc.grade||''),0);
+    return{...d,avg:Math.round(avg*10)/10,agg,subjectCount:d.scores.length};
+  }).sort((a,b)=>b.avg-a.avg||a.agg-b.agg);
+  
+  const rankMap=computeRankings(stuList.map(s=>({id:s.id,avg:s.avg})));
+  const display=topN>0?stuList.slice(0,topN):stuList;
+  
+  const cont=document.getElementById('rankings-content');
+  if(!cont)return;
+  if(display.length===0){cont.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><h4>No score data found</h4><p>Scores must be entered first for rankings to appear.</p></div>';return;}
+  
+  cont.innerHTML=`<div class="card"><div class="table-wrap"><table id="rankings-table">
+    <thead><tr><th>Rank</th><th>Student</th><th>Class</th><th>Subjects</th><th style="text-align:center">Average (%)</th><th style="text-align:center">Aggregate</th><th style="text-align:center">Grade</th></tr></thead>
+    <tbody>${display.map((st,i)=>{
+      const cls=classes.find(c=>c.id===st.classId);
+      const rank=rankMap[st.id]||i+1;
+      const g=gradeGES(st.avg);
+      const rankBadge=rank<=3?`<span class="rank-badge rank-${rank}">${rank===1?'🥇':rank===2?'🥈':'🥉'}</span>`:`<strong>${rank}</strong>`;
+      return`<tr><td>${rankBadge}</td><td>${nameCell(st.name)}</td><td>${cls?cls.name:'—'}</td><td style="text-align:center">${st.subjectCount}</td><td style="text-align:center"><strong>${st.avg}</strong></td><td style="text-align:center">${st.agg||'—'}</td><td style="text-align:center" class="g-${g.g}">${g.g}</td></tr>`;
+    }).join('')}</tbody>
+  </table></div></div>`;
+}
+
+function printRankings(){
+  const tbl=document.getElementById('rankings-table');
+  if(!tbl){toast('No rankings to print','error');return;}
+  const win=window.open('','_blank');
+  win.document.write(`<html><head><title>Student Rankings</title><style>body{font-family:Arial,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#0F1F3D;color:white}tr:nth-child(even){background:#f5f5f5}</style></head><body><h2>Student Rankings — ${cfg.currentTerm} · ${cfg.academicYear}</h2>${tbl.outerHTML}</body></html>`);
+  win.document.close();win.print();
+}
+
+// ═══════════════════════════════════════════
+//  PAGE: TERM ROLLOVER / NEW YEAR SETUP
+// ═══════════════════════════════════════════
+async function pgRollover(){
+  if(currentUser.role!=='admin'){
+    document.getElementById('main-content').innerHTML='<div class="empty-state"><div class="empty-icon">🔒</div><h4>Admin Only</h4></div>';return;
+  }
+  const mc=document.getElementById('main-content');
+  const[students,classes,remarks]=await Promise.all([dbGetAll('students'),dbGetAll('classes'),dbGetAll('remarks')]);
+  const totalStudents=students.filter(s=>s.status==='active').length;
+  const withPromo=remarks.filter(r=>r.term===cfg.currentTerm&&r.academicYear===cfg.academicYear&&r.promoted).length;
+  const promoted=remarks.filter(r=>r.term===cfg.currentTerm&&r.academicYear===cfg.academicYear&&r.promoted==='yes').length;
+  const repeating=remarks.filter(r=>r.term===cfg.currentTerm&&r.academicYear===cfg.academicYear&&r.promoted==='no').length;
+  const pending=remarks.filter(r=>r.term===cfg.currentTerm&&r.academicYear===cfg.academicYear&&(r.promoted===''||r.promoted==='recommended_yes'||r.promoted==='recommended_no'||!r.promoted)).length+Math.max(0,totalStudents-remarks.filter(r=>r.term===cfg.currentTerm&&r.academicYear===cfg.academicYear).length);
+
+  const nextTerm=cfg.currentTerm==='Term 1'?'Term 2':cfg.currentTerm==='Term 2'?'Term 3':'Term 1';
+  const nextYear=cfg.currentTerm==='Term 3'?(() => {const pts=cfg.academicYear.split('/');return (parseInt(pts[0])+1)+'/'+(parseInt(pts[1])+1);})():cfg.academicYear;
+
+  mc.innerHTML=`
+    <div class="page-header"><div><h2>🔄 Term Rollover & New Year Setup</h2><p>Current: ${cfg.currentTerm} · ${cfg.academicYear}</p></div></div>
+    
+    <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px">
+      <div class="stat-card navy"><div class="stat-icon">👨‍🎓</div><div class="stat-label">Active Students</div><div class="stat-value">${totalStudents}</div></div>
+      <div class="stat-card gold"><div class="stat-icon">✅</div><div class="stat-label">Promoted</div><div class="stat-value">${promoted}</div></div>
+      <div class="stat-card" style="border-left:4px solid var(--amber)"><div class="stat-icon">🔁</div><div class="stat-label">Repeating</div><div class="stat-value" style="color:var(--amber)">${repeating}</div></div>
+      <div class="stat-card" style="border-left:4px solid var(--red)"><div class="stat-icon">⏳</div><div class="stat-label">Pending</div><div class="stat-value" style="color:var(--red)">${pending}</div></div>
+    </div>
+    
+    ${pending>0?`<div class="warn-box">⚠️ <strong>${pending} students</strong> still have pending promotion status. It is recommended to set all promotions before rolling over.</div>`:''}
+    
+    <div class="card" style="max-width:700px">
+      <div class="card-header"><h3>Rollover Steps</h3></div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div class="rollover-step" onclick="rolloverStep1()">
+          <div style="display:flex;align-items:center">
+            <span class="rollover-step-num">1</span>
+            <div><strong>Archive Current Term Data</strong><div style="font-size:12px;color:var(--gray-400)">Mark current term as complete and create archive snapshot</div></div>
+          </div>
+        </div>
+        <div class="rollover-step" onclick="rolloverStep2()">
+          <div style="display:flex;align-items:center">
+            <span class="rollover-step-num">2</span>
+            <div><strong>Execute Pending Promotions</strong><div style="font-size:12px;color:var(--gray-400)">Move all admin-approved promoted students to next class level</div></div>
+          </div>
+        </div>
+        <div class="rollover-step" onclick="rolloverStep3(window._rolloverNextTerm,window._rolloverNextYear)">
+          <div style="display:flex;align-items:center">
+            <span class="rollover-step-num">3</span>
+            <div><strong>Switch to Next Term</strong><div style="font-size:12px;color:var(--gray-400)">Set system to <strong>${nextTerm} · ${nextYear}</strong></div></div>
+          </div>
+        </div>
+        <div class="rollover-step" onclick="rolloverStep4()">
+          <div style="display:flex;align-items:center">
+            <span class="rollover-step-num">4</span>
+            <div><strong>Reset Attendance Counters</strong><div style="font-size:12px;color:var(--gray-400)">Clear attendance for new term (previous data preserved)</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:16px;border-top:1px solid var(--gray-100);display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-gold" onclick="runFullRollover('${nextTerm}','${nextYear}')">🚀 Run Full Rollover (All Steps)</button>
+      </div>
+    </div>`;
+  window._rolloverNextTerm=nextTerm;window._rolloverNextYear=nextYear;
+}
+
+async function rolloverStep1(){
+  toast('Step 1: Archiving current term…','info');
+  await audit('ROLLOVER_STEP1',`Archived ${cfg.currentTerm} ${cfg.academicYear}`);
+  document.querySelectorAll('.rollover-step')[0].classList.add('done');
+  toast('Term archived','success');
+}
+
+async function rolloverStep2(){
+  const[students,remarks]=await Promise.all([dbGetAll('students'),dbGetAll('remarks')]);
+  const toPromote=remarks.filter(r=>r.term===cfg.currentTerm&&r.academicYear===cfg.academicYear&&r.promoted==='yes'&&r.promotionVerifiedRole==='admin');
+  let count=0;
+  for(const r of toPromote){
+    await executeClassPromotion(r.studentId);count++;
+  }
+  document.querySelectorAll('.rollover-step')[1].classList.add('done');
+  await audit('ROLLOVER_STEP2',`Executed ${count} pending promotions`);
+  toast(`${count} students promoted to next class`,'success');
+}
+
+async function rolloverStep3(nextTerm,nextYear){
+  if(!confirm(`Switch system to ${nextTerm} · ${nextYear}?`))return;
+  await saveCfg('currentTerm',nextTerm);await saveCfg('academicYear',nextYear);
+  document.querySelectorAll('.rollover-step')[2].classList.add('done');
+  await audit('ROLLOVER_STEP3',`Term switched to ${nextTerm} ${nextYear}`);
+  toast(`System now on ${nextTerm} · ${nextYear}`,'success');
+}
+
+async function rolloverStep4(){
+  if(!confirm('Clear attendance counters for the new term?'))return;
+  await audit('ROLLOVER_STEP4','Attendance counters reset for new term');
+  document.querySelectorAll('.rollover-step')[3].classList.add('done');
+  toast('Attendance counters reset','success');
+}
+
+async function runFullRollover(nextTerm,nextYear){
+  // Show a detailed summary before proceeding
+  const[students,remarks]=await Promise.all([dbGetAll('students'),dbGetAll('remarks')]);
+  const active=students.filter(s=>s.status==='active').length;
+  const toPromote=remarks.filter(r=>r.term===cfg.currentTerm&&r.academicYear===cfg.academicYear&&r.promoted==='yes'&&r.promotionVerifiedRole==='admin').length;
+  const pending=remarks.filter(r=>r.term===cfg.currentTerm&&r.academicYear===cfg.academicYear&&(!r.promoted||r.promoted==='recommended_yes'||r.promoted==='recommended_no'||r.promoted==='')).length;
+  const summary=`FULL ROLLOVER SUMMARY\n\nFrom: ${cfg.currentTerm} · ${cfg.academicYear}\nTo:   ${nextTerm} · ${nextYear}\n\nActive students: ${active}\nStudents to promote: ${toPromote}\nPending promotions (unresolved): ${pending}\n\nThis will:\n1. Archive current term\n2. Promote ${toPromote} students\n3. Switch term to ${nextTerm} · ${nextYear}\n4. Reset attendance counters\n\n${pending>0?`⚠️ WARNING: ${pending} students still have unresolved promotion status.\n`:''}\nContinue?`;
+  if(!confirm(summary))return;
+  if(!confirm('Final confirmation: this cannot be undone. Proceed?'))return;
+  await rolloverStep1();
+  await rolloverStep2();
+  await rolloverStep3(nextTerm,nextYear);
+  await rolloverStep4();
+  await audit('FULL_ROLLOVER',`Full rollover to ${nextTerm} ${nextYear} completed`);
+  toast('Full rollover complete! System is now on '+nextTerm+' · '+nextYear,'success');
+  setTimeout(()=>pgRollover(),1500);
+}
+
+// ═══════════════════════════════════════════
+//  PAGE: PARENT PORTAL (Admin read-only view)
+// ═══════════════════════════════════════════
+async function pgParentPortal(){
+  if(currentUser.role!=='admin'){
+    document.getElementById('main-content').innerHTML='<div class="empty-state"><div class="empty-icon">🔒</div><h4>Admin Only</h4></div>';return;
+  }
+  const mc=document.getElementById('main-content');
+  const users=await dbGetAll('users');
+  const parents=users.filter(u=>u.role==='parent');
+  const students=await dbGetAll('students');
+  
+  mc.innerHTML=`
+    <div class="page-header">
+      <div><h2>👨‍👩‍👧 Parent Portal</h2><p>Manage parent accounts and their linked students</p></div>
+      <button class="btn btn-primary" onclick="openCreateUserModal()">+ Add Parent Account</button>
+    </div>
+    <div class="info-box">Parent accounts have READ-ONLY access to their child's report cards, scores, and attendance. They cannot modify any data.</div>
+    <div class="card">
+      <div class="card-header"><h3>Parent Accounts (${parents.length})</h3></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Parent Name</th><th>Username</th><th>Email</th><th>Linked Student</th><th>Status</th><th></th></tr></thead>
+        <tbody>${parents.length===0?'<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:30px">No parent accounts yet</td></tr>':parents.map(u=>{
+          const linkedSt=students.find(s=>s.studentId===u.studentId);
+          return`<tr>
+            <td>${nameCell(u.name)}</td>
+            <td style="color:var(--gray-400)">${u.username}</td>
+            <td style="font-size:12px;color:var(--gray-400)">${u.email||'—'}</td>
+            <td>${linkedSt?`<span class="badge badge-green">${linkedSt.name}</span>`:`<span style="color:var(--red);font-size:12px">No student linked (ID: ${u.studentId||'none'})</span>`}</td>
+            <td><span class="badge ${u.status==='active'?'badge-green':u.status==='pending'?'badge-amber':'badge-red'}">${u.status}</span></td>
+            <td><div style="display:flex;gap:6px">
+              <button class="btn btn-sm" onclick="linkParentToStudent(${u.id},'${u.studentId||''}')">🔗 Link</button>
+              ${u.status==='pending'?`<button class="btn btn-sm btn-success" onclick="approveUser(${u.id})">Approve</button>`:''}
+            </div></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>`;
+}
+
+async function linkParentToStudent(userId,currentSid){
+  const students=await dbGetAll('students');
+  openModal('🔗 Link Parent to Student',`
+    <div class="info-box">Select the student to link to this parent account. The parent will see this student's grades, reports, and attendance.</div>
+    <div class="fg"><label>Student</label>
+      <select id="link-student">
+        <option value="">— Select Student —</option>
+        ${students.filter(s=>s.status!=='graduated').sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<option value="${s.studentId||s.id}" ${(s.studentId||s.id.toString())===currentSid?'selected':''}>${s.name} (${s.studentId||s.id})</option>`).join('')}
+      </select>
+    </div>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveLinkParent(${userId})">Save Link</button>`
+  );
+}
+
+async function saveLinkParent(userId){
+  const sid=document.getElementById('link-student').value;
+  if(!sid){toast('Select a student','error');return;}
+  const u=await dbGet('users',userId);
+  u.studentId=sid;await dbPut('users',u);
+  await audit('LINK_PARENT',`Parent ${u.name} linked to student ${sid}`);
+  toast('Parent linked to student','success');closeModal();pgParentPortal();
+}
+
+// ═══════════════════════════════════════════
+//  SMS / WHATSAPP ALERTS CONFIG (in Settings)
+// ═══════════════════════════════════════════
+async function saveSmsConfig(){
+  await saveCfg('smsProvider',document.getElementById('sms-provider').value);
+  await saveCfg('smsApiKey',document.getElementById('sms-apikey').value);
+  await saveCfg('smsFrom',document.getElementById('sms-from').value);
+  await saveCfg('waApiKey',document.getElementById('wa-apikey').value);
+  await saveCfg('waPhoneId',document.getElementById('wa-phone').value);
+  await audit('SETTINGS_SMS','SMS/WA config updated');
+  toast('Alert settings saved','success');
+}
+
+async function sendBulkSmsAlert(message,targetPhone=null){
+  if(!cfg.smsApiKey){toast('SMS not configured. Add your Africa\'s Talking API key in Settings → Alerts.','error');return;}
+  const phone=targetPhone||(cfg.smsFrom||'');
+  if(!phone){toast('No recipient phone number specified.','error');return;}
+  // Africa's Talking SMS API
+  try{
+    const params=new URLSearchParams();
+    params.append('username',cfg.smsFrom||'sandbox');
+    params.append('to',phone);
+    params.append('message',message);
+    params.append('from',''); // set in settings
+    const res=await fetch('https://api.africastalking.com/version1/messaging',{
+      method:'POST',
+      headers:{'apiKey':cfg.smsApiKey,'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json'},
+      body:params.toString()
+    });
+    const data=await res.json();
+    if(data&&data.SMSMessageData&&data.SMSMessageData.Recipients&&data.SMSMessageData.Recipients.length>0){
+      const status=data.SMSMessageData.Recipients[0].status;
+      if(status==='Success'){toast('SMS sent successfully','success');}
+      else{toast('SMS failed: '+status,'error');}
+    } else {
+      toast('SMS response unclear — check Africa\'s Talking dashboard.','info');
+    }
+  }catch(e){
+    console.warn('SMS error:',e);
+    toast('SMS could not be sent. Check network and API key.','error');
+  }
+}
+
 </script>
 </body>
 </html>
