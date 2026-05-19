@@ -477,6 +477,39 @@ body.dark-mode tbody tr:hover td{background:rgba(255,255,255,0.03);}
 .rank-1{background:var(--gold);color:var(--navy);}
 .rank-2{background:#C0C0C0;color:#333;}
 .rank-3{background:#CD7F32;color:white;}
+
+/* ── DARK MODE ── */
+body.dark-mode{background:#0F1A2E;color:#E0E0D8;}
+body.dark-mode #sidebar{background:#111E35;border-right-color:#1E2E50;}
+body.dark-mode #topbar{background:#0A1628;}
+body.dark-mode .card{background:#111E35;border-color:#1E2E50;}
+body.dark-mode .card-header{border-bottom-color:#1E2E50;}
+body.dark-mode th{background:#0D1829;color:#8A8A7F;}
+body.dark-mode td{color:#D0D0C8;}
+body.dark-mode tbody tr:hover td{background:rgba(255,255,255,.04);}
+body.dark-mode .nav-item{color:#9A9A90;}
+body.dark-mode .nav-item:hover{background:#1E2E50;color:#E0E0D8;}
+body.dark-mode .nav-item.active{background:#2A4A80;color:#fff;}
+body.dark-mode .modal-box{background:#111E35;color:#E0E0D8;}
+body.dark-mode .modal-hdr{background:#111E35;border-bottom-color:#1E2E50;}
+body.dark-mode .modal-ftr{border-top-color:#1E2E50;}
+body.dark-mode .fg input,.dark-mode .fg select,.dark-mode .fg textarea,
+body.dark-mode .f-group input,.dark-mode .f-group select,
+body.dark-mode .search-input,.dark-mode .filter-select{background:#0D1829;border-color:#1E2E50;color:#E0E0D8;}
+body.dark-mode .fg input:focus,.dark-mode .fg select:focus,.dark-mode .fg textarea:focus{background:#0A1628;border-color:var(--gold);}
+body.dark-mode .btn{background:#111E35;border-color:#1E2E50;color:#D0D0C8;}
+body.dark-mode .btn:hover{background:#1E2E50;}
+body.dark-mode .btn-primary{background:var(--navy-60);border-color:var(--navy-60);color:#fff;}
+body.dark-mode .stat-card{background:#111E35;border-color:#1E2E50;}
+body.dark-mode .tab-row{background:#111E35;border-color:#1E2E50;}
+body.dark-mode .tab{color:#9A9A90;}
+body.dark-mode .tab.active{background:#2A4A80;color:#fff;}
+body.dark-mode .info-box{background:#0D2020;color:#7EDDDD;}
+body.dark-mode .warn-box{background:#1A1200;color:#FFCC44;}
+body.dark-mode .pending-banner{background:#1A1200;}
+body.dark-mode .sc2-final-panel{background:linear-gradient(135deg,#0A1628 0%,#111E35 100%);}
+body.dark-mode code{background:#0D1829;color:#7EDDDD;}
+body.dark-mode #toast{background:#1E2E50;}
 </style>
 </head>
 <body>
@@ -591,10 +624,12 @@ body.dark-mode tbody tr:hover td{background:rgba(255,255,255,0.03);}
     <div class="topbar-center"><span id="topbar-page-title">Dashboard</span></div>
     <div class="topbar-right">
       <button class="dark-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode" id="dark-toggle-btn">🌙</button>
-      <select class="lang-select" onchange="setLanguage(this.value)" id="lang-selector">
+      <select class="lang-select" onchange="setLanguage(this.value)" id="lang-selector" class="lang-selector">
         <option value="en">🌐 EN</option>
         <option value="fr">🇫🇷 FR</option>
         <option value="tw">🇬🇭 TW</option>
+          <option value="ga">🇬🇭 GA</option>
+          <option value="ee">🇬🇭 EE</option>
         <option value="ha">🌍 HA</option>
       </select>
       <div class="user-chip">
@@ -755,7 +790,7 @@ async function sbReq(method, table, body=null, params=''){
     'apikey': SUPABASE_ANON_KEY,
     'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
     'Content-Type': 'application/json',
-    'Prefer': method==='POST'?'return=representation':'return=representation',
+    'Prefer': (method==='POST'||method==='PATCH')?'return=representation':'return=minimal',
   };
   const opts={method, headers};
   if(body)opts.body=JSON.stringify(body);
@@ -839,35 +874,47 @@ let cfg={};
 async function loadConfig(){
   const all=await dbGetAll('settings');
   all.forEach(s=>cfg[s.key]=s.value);
-  cfg.schoolName=cfg.schoolName||'My School';
-  cfg.schoolMotto=cfg.schoolMotto||'Excellence in Education';
-  cfg.schoolAddress=cfg.schoolAddress||'';
-  cfg.schoolPhone=cfg.schoolPhone||'';
-  cfg.currentTerm=cfg.currentTerm||'Term 1';
-  cfg.academicYear=cfg.academicYear||'2024/2025';
-  cfg.gradingSystem=cfg.gradingSystem||'ges';
-  cfg.classScoreMax=cfg.classScoreMax||30;
-  cfg.examScoreMax=cfg.examScoreMax||70;
-  cfg.bestXSubjects=cfg.bestXSubjects||0; // 0 = all subjects
-  cfg.passThreshold=cfg.passThreshold||50;
-  cfg.sessionTimeout=cfg.sessionTimeout||30;
-  cfg.attendanceAlert=cfg.attendanceAlert||75;
-  cfg.twoFactorEnabled=cfg.twoFactorEnabled||false;
-  emailjsCfg.serviceId=cfg.ejsServiceId||'';
-  emailjsCfg.templateId=cfg.ejsTemplateId||'';
-  emailjsCfg.publicKey=cfg.ejsPublicKey||'';
-  document.getElementById('topbar-school-name').innerHTML=cfg.schoolName.replace(' ','<br>');
-  document.getElementById('auth-school-title').textContent=cfg.schoolName;
-  if(emailjsCfg.publicKey)try{emailjs.init(emailjsCfg.publicKey);}catch(e){}
-  // v10 new settings
-  cfg.smsProvider=d.smsProvider||'africastalking';
-  cfg.smsApiKey=d.smsApiKey||'';
-  cfg.smsFrom=d.smsFrom||'';
-  cfg.waApiKey=d.waApiKey||'';
-  cfg.waPhoneId=d.waPhoneId||'';
-  cfg.schoolLogo=d.schoolLogo||'';
-  cfg.schoolAddress=d.schoolAddress||cfg.schoolAddress||'';
-  cfg.schoolPhone=d.schoolPhone||cfg.schoolPhone||'';
+
+  // ── Text / string settings ──────────────────────────────────────
+  cfg.schoolName    = cfg.schoolName    || 'My School';
+  cfg.schoolMotto   = cfg.schoolMotto   || 'Excellence in Education';
+  cfg.schoolAddress = cfg.schoolAddress || '';
+  cfg.schoolPhone   = cfg.schoolPhone   || '';
+  cfg.currentTerm   = cfg.currentTerm   || 'Term 1';
+  cfg.academicYear  = cfg.academicYear  || '2024/2025';
+  cfg.gradingSystem = cfg.gradingSystem || 'ges';
+  cfg.schoolLogo    = cfg.schoolLogo    || '';
+
+  // ── Numeric settings — must parse from string (Supabase stores everything as text) ──
+  cfg.classScoreMax   = parseInt(cfg.classScoreMax)   || 30;
+  cfg.examScoreMax    = parseInt(cfg.examScoreMax)    || 70;
+  cfg.bestXSubjects   = parseInt(cfg.bestXSubjects)   || 0;
+  cfg.passThreshold   = parseInt(cfg.passThreshold)   || 50;
+  cfg.sessionTimeout  = parseInt(cfg.sessionTimeout)  || 30;
+  cfg.attendanceAlert = parseInt(cfg.attendanceAlert) || 75;
+
+  // ── Boolean settings ────────────────────────────────────────────
+  cfg.twoFactorEnabled = (cfg.twoFactorEnabled === 'true' || cfg.twoFactorEnabled === true);
+
+  // ── EmailJS ─────────────────────────────────────────────────────
+  emailjsCfg.serviceId  = cfg.ejsServiceId  || '';
+  emailjsCfg.templateId = cfg.ejsTemplateId || '';
+  emailjsCfg.publicKey  = cfg.ejsPublicKey  || '';
+
+  // ── v10 SMS / WhatsApp settings (was broken: used undefined var 'd') ──
+  cfg.smsProvider = cfg.smsProvider || 'africastalking';
+  cfg.smsApiKey   = cfg.smsApiKey   || '';
+  cfg.smsFrom     = cfg.smsFrom     || '';
+  cfg.waApiKey    = cfg.waApiKey    || '';
+  cfg.waPhoneId   = cfg.waPhoneId   || '';
+
+  // ── UI updates ──────────────────────────────────────────────────
+  const nameEl = document.getElementById('topbar-school-name');
+  if(nameEl) nameEl.innerHTML = cfg.schoolName.replace(' ','<br>');
+  const titleEl = document.getElementById('auth-school-title');
+  if(titleEl) titleEl.textContent = cfg.schoolName;
+
+  if(emailjsCfg.publicKey) try{ emailjs.init(emailjsCfg.publicKey); }catch(e){}
 }
 async function saveCfg(key,value){
   cfg[key]=value;
@@ -963,7 +1010,7 @@ const SESSION_WARN_BEFORE=60000; // warn 60s before timeout
 
 function resetSessionTimer(){
   _lastActivity=Date.now();
-  clearTimeout(_sessionTimer);clearTimeout(_sessionWarnTimer);
+  clearTimeout(_sessionTimer);clearTimeout(_sessionWarnTimer);clearTimeout(_countdownTimer);
   const tout=document.getElementById('session-timeout-bar');
   if(tout)tout.style.display='none';
   if(!cfg.sessionTimeout||cfg.sessionTimeout<=0||!currentUser)return;
@@ -977,10 +1024,13 @@ function resetSessionTimer(){
   },ms);
 }
 
+let _countdownTimer=null;
 function startSessionCountdown(secs){
   const el=document.getElementById('session-countdown');if(!el)return;
-  el.textContent=secs;if(secs<=0)return;
-  setTimeout(()=>startSessionCountdown(secs-1),1000);
+  el.textContent=secs;
+  clearTimeout(_countdownTimer);
+  if(secs<=0)return;
+  _countdownTimer=setTimeout(()=>startSessionCountdown(secs-1),1000);
 }
 
 function initSessionTracking(){
@@ -1005,7 +1055,7 @@ async function handle2FA(user){
     for(const t of old.filter(t=>t.userId===user.id)) await dbDel('twoFactorTokens',t.id);
   }catch(e){}
   const tokenRow=await dbAdd('twoFactorTokens',{userId:user.id,token:code,expiresAt});
-  _2faState={userId:user.id,code,pendingUser:user,dbTokenId:tokenRow};
+  _2faState={userId:user.id,code,pendingUser:user,dbTokenId:tokenRow,expiresAt:Date.now()+10*60*1000};
   let sent=false;
   if(emailjsCfg.serviceId&&emailjsCfg.templateId&&emailjsCfg.publicKey&&user.email){
     try{
@@ -1034,13 +1084,21 @@ function show2FAModal(){
 function verify2FA(){
   const entered=document.getElementById('twofa-code-input').value.trim();
   const errEl=document.getElementById('twofa-error');
-  // Check expiry via DB token if available
+  // Check expiry
+  if(_2faState.expiresAt&&Date.now()>_2faState.expiresAt){
+    errEl.textContent='This code has expired. Please sign in again to receive a new code.';
+    errEl.style.display='block';
+    // Clean up stale token
+    if(_2faState.dbTokenId)dbDel('twoFactorTokens',_2faState.dbTokenId).catch(()=>{});
+    _2faState={userId:null,code:null,pendingUser:null,dbTokenId:null,expiresAt:null};
+    return;
+  }
   if(entered!==_2faState.code){errEl.textContent='Invalid code. Try again.';errEl.style.display='block';return;}
   document.getElementById('twofa-overlay').classList.remove('open');
   currentUser=_2faState.pendingUser;
   // Clean up DB token
   if(_2faState.dbTokenId)dbDel('twoFactorTokens',_2faState.dbTokenId).catch(()=>{});
-  _2faState={userId:null,code:null,pendingUser:null,dbTokenId:null};
+  _2faState={userId:null,code:null,pendingUser:null,dbTokenId:null,expiresAt:null};
   audit('LOGIN','2FA verified login');
   launchApp();
 }
@@ -1114,7 +1172,14 @@ const LANGS={
       settings:'Settings',classes:'Classes',subjects:'Subjects',users:'User Accounts',
       alumni:'Alumni',fees:'Fee Management',calendar:'School Calendar',awards:'Academic Awards',
       timetable:'Exam Timetable',rollover:'Term Rollover',rankings:'Student Rankings',
-      'parent-portal':'Parent Portal'},
+      'parent-portal':'Parent Portal',
+      performance:'Performance',attendance:'Attendance','daily-attendance':'Daily Attendance',
+      notices:'Notice Board',messages:'Messages',users:'User Accounts',
+      'data-management':'Data Management',promotions:'Promotions',sms:'SMS Alerts',
+      'exam-timetable':'Exam Timetable','term-rollover':'Term Rollover',
+      'my-report':'My Report Card','my-scores':'Scores Overview',
+      'progress-chart':'Progress Charts','my-assignments':'My Subjects',
+      'subject-assignments':'Subject Assignments',audit:'Audit Log'},
   fr:{dashboard:'Tableau de Bord',students:'Élèves',scores:'Saisir Notes',reports:'Bulletins',
       settings:'Paramètres',classes:'Classes',subjects:'Matières',users:'Comptes',
       alumni:'Anciens Élèves',fees:'Frais Scolaires',calendar:'Calendrier',awards:'Distinctions',
@@ -1124,21 +1189,80 @@ const LANGS={
       settings:'Nhyehyɛe',classes:'Nkurofosɛm',subjects:'Nnwuma',users:'Adesua Fie Adwumayɛfo',
       alumni:'Nnipa a wɔsan kɔe',fees:'Sika Tua',calendar:'Nnawotwe Nhyehyɛ',awards:'Anim Gye',
       timetable:'Ntwaho Nhyehyɛ',rollover:'Bere Ntam Sesa',rankings:'Tenten Nhwɛso',
-      'parent-portal':'Awopafo Kwan'},
+      'parent-portal':'Awopafo Kwan',
+      performance:'Adesua Nhwɛso',attendance:'Baa Nhwɛso','daily-attendance':'Da Biara Baa',
+      notices:'Kra Nhyehyɛ',messages:'Nkra',users:'Nnipa Nhyehyɛ',
+      'data-management':'Nhoma Nhwɛso',promotions:'Mmoa Kwan',sms:'SMS Kra',
+      'exam-timetable':'Ntwaho Nhyehyɛ','term-rollover':'Bere Ntam Sesa',
+      'my-report':'Me Nkrataa','my-scores':'Me Nsusuanom',
+      'progress-chart':'Me Nkɔso','my-assignments':'Me Nnwuma',
+      'subject-assignments':'Nnwuma Nhyehyɛ',audit:'Adesua Nhwɛso'},
   ha:{dashboard:'Allon Sarrafa',students:'Dalibai',scores:'Sakamako',reports:'Takardun Maki',
       settings:'Saitin Tsarin',classes:'Azuzuwa',subjects:'Darussan Karatu',users:'Masu Amfani da Tsarin',
       alumni:'Tsofaffin Dalibai',fees:'Kudin Karatu',calendar:'Jadawalin Makaranta',awards:'Kyaututtukan Nasara',
       timetable:'Jadawalin Jarabawa',rollover:'Canza Lokacin Karatu',rankings:'Jerin Matsayi',
-      'parent-portal':'Shafin Iyaye'}
+      'parent-portal':'Shafin Iyaye',
+      performance:'Ayyukan Dalibai',attendance:'Halarta','daily-attendance':'Yau Halarta',
+      notices:'Sanarwa',messages:'Saƙo',users:'Masu Amfani',
+      'data-management':'Sarrafa Bayanai',promotions:'Inganta',sms:'SMS Saƙo',
+      'exam-timetable':'Jadawalin Jarabawa','term-rollover':'Canza Lokaci',
+      'my-report':'Takardina','my-scores':'Makin na',
+      'progress-chart':'Ginshiƙin ci gabana','my-assignments':'Darussan na',
+      'subject-assignments':'Darasi Rarraba',audit:'Rikodin Ayyuka'},
+  ga:{dashboard:'Yɛ Kɛ Maŋ',students:'Hewalɔi',scores:'Totaa Kɛ',reports:'Kɛ Paaperɛ',
+      settings:'Sɛtini',classes:'Klasi',subjects:'Gbɔmɔ',users:'Nii Gbɔmɔ',
+      alumni:'Kɛ Hewalɔi',fees:'Sika Kɛ',calendar:'Ŋɔkwa Kɛ',awards:'Adindam',
+      timetable:'Jarabawaa Kɛ',rollover:'Gbɔ Ŋmɛni',rankings:'Tɔtɔ Gbɔmɔ',
+      'parent-portal':'Iyaye Kɛ',
+      performance:'Hewalɔi Gbɔmɔ',attendance:'Ŋɔkwa','daily-attendance':'Ehi Ŋɔkwa',
+      notices:'Kɛ Sanarwa',messages:'Kɛ Saƙo',users:'Nii Mli',
+      'data-management':'Kɛ Bayanai',promotions:'Kɛ Inganta',sms:'SMS Kɛ',
+      'exam-timetable':'Kɛ Jarabawa','term-rollover':'Bere Kɛ Sesa',
+      'my-report':'Mi Paaperɛ','my-scores':'Mi Totaa',
+      'progress-chart':'Mi Nkɔso','my-assignments':'Mi Gbɔmɔ',
+      'subject-assignments':'Gbɔmɔ Rarraba',audit:'Kɛ Adindam'},
+  ee:{dashboard:'Nutinya Kple',students:'Amegawo',scores:'Markuwo',reports:'Takpekpee',
+      settings:'Setiŋuwo',classes:'Klaasio',subjects:'Nutinya',users:'Zãwolawo',
+      alumni:'Dɔamedela',fees:'Xexlẽme',calendar:'Ŋkekewo',awards:'Ŋutiɖoɖowo',
+      timetable:'Examinasio Ŋkeke',rollover:'Ŋkeke Vevie',rankings:'Ŋuɖoɖo',
+      'parent-portal':'Vidzidzi Ƒe Taflatse',
+      performance:'Amegawo Dɔwɔwɔ',attendance:'Dzidzinu','daily-attendance':'Egbe Dzidzinu',
+      notices:'Nuwuwɔwɔ',messages:'Nyatakakawo',users:'Zãwolawo',
+      'data-management':'Dɔwɔwɔ Ŋkeke',promotions:'Lãlã',sms:'SMS Nyatakakawo',
+      'exam-timetable':'Examinasio Ŋkeke','term-rollover':'Ŋkeke Vevie Trɔtrɔ',
+      'my-report':'Nye Takpekpee','my-scores':'Nye Markuwo',
+      'progress-chart':'Nye Ŋuɖoɖo','my-assignments':'Nye Nutinya',
+      'subject-assignments':'Nutinya Ŋkeke',audit:'Dɔwɔwɔ Ŋkeke'}
 };
 function t(key){return(LANGS[currentLang]&&LANGS[currentLang][key])||LANGS.en[key]||key;}
 
 function setLanguage(lang){
   currentLang=lang;
   try{localStorage.setItem('school_lang',lang);}catch(e){}
-  if(currentUser)buildSidebar();
+  // Update all lang selector dropdowns
+  document.querySelectorAll('.lang-selector').forEach(el=>el.value=lang);
   const ls=document.getElementById('lang-selector');
   if(ls)ls.value=lang;
+  if(currentUser){
+    buildSidebar();
+    // Re-render current page so all labels update
+    const active=document.querySelector('.nav-item.active');
+    if(active){
+      const page=active.dataset.page||active.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+      if(page)navigate(page);
+    }
+    // Save to DB so it persists after logout
+    saveCfg('language',lang).catch(()=>{});
+  }
+  // Update topbar page title
+  const titleEl=document.getElementById('topbar-page-title');
+  if(titleEl){
+    const active=document.querySelector('.nav-item.active');
+    if(active){
+      const page=active.id.replace('nav-','');
+      titleEl.textContent=t(page)||titleEl.textContent;
+    }
+  }
   toast('Language changed','success');
 }
 
@@ -1150,6 +1274,8 @@ function toggleDarkMode(){
   const chk=document.getElementById('cfg-dark');
   if(chk)chk.checked=darkMode;
   try{localStorage.setItem('school_dark',darkMode?'1':'0');}catch(e){}
+  // Persist to DB so preference survives across devices and after logout
+  if(currentUser) saveCfg('darkMode',darkMode?'true':'false').catch(()=>{});
 }
 
 function initTheme(){
@@ -1160,6 +1286,7 @@ function initTheme(){
       const btn=document.getElementById('dark-toggle-btn');if(btn)btn.textContent='☀️';}
     currentLang=l;
     const ls=document.getElementById('lang-selector');if(ls)ls.value=l;
+    document.querySelectorAll('.lang-selector').forEach(el=>el.value=l);
   }catch(e){}
 }
 
@@ -1213,24 +1340,28 @@ async function doLogin(){
 async function doRegister(){
   const name=document.getElementById('reg-name').value.trim();
   const username=document.getElementById('reg-username').value.trim();
-  const email=document.getElementById('reg-email').value.trim();
+  const email=document.getElementById('reg-email').value.trim().toLowerCase();
   const password=document.getElementById('reg-password').value;
   const studentId=document.getElementById('reg-studentid').value.trim();
   const msgEl=document.getElementById('reg-msg');
   if(!name||!username||!password||!email){msgEl.textContent='All fields required.';msgEl.style.color='var(--red)';msgEl.style.display='block';return;}
+  if(password.length<6){msgEl.textContent='Password must be at least 6 characters.';msgEl.style.color='var(--red)';msgEl.style.display='block';return;}
   try{
-    const status=regRole==='teacher'?'pending':'pending'; // All new accounts require admin approval
+    const existing=await dbGetAll('users');
+    if(existing.find(u=>u.username===username)){msgEl.textContent='Username already taken. Please choose another.';msgEl.style.color='var(--red)';msgEl.style.display='block';return;}
+    if(existing.find(u=>(u.email||'').toLowerCase()===email)){msgEl.textContent='An account with that email already exists.';msgEl.style.color='var(--red)';msgEl.style.display='block';return;}
     const hashedPw=await hashPassword(password);
-    await dbAdd('users',{username,password:hashedPw,name,email,role:regRole,studentId:regRole==='parent'?studentId:null,status,createdAt:new Date().toISOString()});
+    await dbAdd('users',{username,password:hashedPw,name,email,role:regRole,studentId:regRole==='parent'?studentId:null,status:'pending',createdAt:new Date().toISOString()});
     msgEl.style.color='var(--amber)';
     msgEl.textContent=regRole==='teacher'?'✅ Account created! Awaiting admin approval.':'✅ Account created! Awaiting admin approval before you can sign in.';
     msgEl.style.display='block';
-  }catch(e){msgEl.textContent='Username already taken.';msgEl.style.color='var(--red)';msgEl.style.display='block';}
+  }catch(e){msgEl.textContent='Registration failed. Please try again.';msgEl.style.color='var(--red)';msgEl.style.display='block';}
 }
 
 async function doLogout(){
   if(currentUser)try{await audit('LOGOUT','User signed out');}catch(e){}
-  clearTimeout(_sessionTimer);clearTimeout(_sessionWarnTimer);
+  clearTimeout(_sessionTimer);clearTimeout(_sessionWarnTimer);clearTimeout(_countdownTimer);
+  _unsavedScores=false;
   currentUser=null;
   document.getElementById('app').classList.remove('visible');
   document.getElementById('auth-screen').style.display='flex';
@@ -1312,6 +1443,14 @@ function launchApp(){
   rb.className='badge-role role-'+(currentUser.role==='admin'?'admin':currentUser.role==='teacher'?'teacher':'parent');
   buildSidebar();
   initSessionTracking();
+  // Apply saved language and dark mode from DB settings
+  if(cfg.language&&cfg.language!=='en'){
+    currentLang=cfg.language;
+    try{localStorage.setItem('school_lang',cfg.language);}catch(e){}
+    const ls=document.getElementById('lang-selector');if(ls)ls.value=cfg.language;
+    document.querySelectorAll('.lang-selector').forEach(el=>el.value=cfg.language);
+  }
+  if(cfg.darkMode==='true'&&!darkMode){toggleDarkMode();}
   navigate('dashboard');
 }
 
@@ -1319,7 +1458,7 @@ function launchApp(){
 function buildSidebar(){
   const role=currentUser.role;
   let html='';
-  const ni=(id,icon,label)=>`<div class="nav-item" id="nav-${id}" onclick="navigate('${id}')"><span class="ni">${icon}</span>${label}</div>`;
+  const ni=(id,icon,label)=>`<div class="nav-item" id="nav-${id}" onclick="navigate('${id}')"><span class="ni">${icon}</span>${t(id)||label}</div>`;
   html+=`<div class="nav-section-label">Overview</div>`;
   html+=ni('dashboard','📊','Dashboard');
   if(role==='admin'||role==='teacher'){
@@ -1421,7 +1560,13 @@ function closeSidebar(){
 
 // NAVIGATION
 let currentPage='';
+let _unsavedScores=false; // set to true when score inputs are edited, cleared on save
+
 function navigate(page){
+  if(_unsavedScores&&currentPage==='scores'&&page!=='scores'){
+    if(!confirm('You have unsaved score changes. Leave anyway?'))return;
+    _unsavedScores=false;
+  }
   currentPage=page;closeSidebar();
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const navEl=document.getElementById('nav-'+page);if(navEl)navEl.classList.add('active');
@@ -1497,19 +1642,15 @@ async function pgDashboard(){
     html+=`<div class="pending-banner"><div class="icon">⏳</div><div><h4>${pending} teacher account${pending>1?'s':''} awaiting approval</h4><p>Review and approve new teacher registrations.</p></div><button class="btn btn-gold" style="margin-left:auto" onclick="navigate('users')">Review Now</button></div>`;
   }
 
-  
-  // Pending promotion recommendations (for admin)
-  if(currentUser.role==='admin'){
+  // Pending promotion recommendations banner (built into html, not prepended after)
+  if(role==='admin'){
     const allRemarks=await dbGetAll('remarks').catch(()=>[]);
     const pendingRecs=allRemarks.filter(r=>r.promoted==='recommended_yes'||r.promoted==='recommended_no');
     if(pendingRecs.length>0){
-      const alertDiv=document.createElement('div');
-      alertDiv.className='warn-box';
-      alertDiv.style.cursor='pointer';
-      alertDiv.innerHTML=`⚠️ <strong>${pendingRecs.length} student${pendingRecs.length>1?'s':''}</strong> ha${pendingRecs.length>1?'ve':'s'} pending promotion recommendations awaiting your approval. <a style="color:var(--navy);font-weight:600" onclick="navigate('reports')">Go to Report Cards →</a>`;
-      mc.prepend(alertDiv);
+      html+=`<div class="warn-box" style="cursor:pointer" onclick="navigate('reports')">⚠️ <strong>${pendingRecs.length} student${pendingRecs.length>1?'s':''}</strong> ha${pendingRecs.length>1?'ve':'s'} pending promotion recommendations awaiting your approval. <span style="color:var(--navy);font-weight:600">Go to Report Cards →</span></div>`;
     }
   }
+
 if(role==='admin'||role==='teacher'){
     const myStudents=role==='teacher'?activeStudents.filter(s=>{const cls=classes.find(c=>c.id===s.classId);return cls&&cls.teacherId===currentUser.id;}):activeStudents;
     html+=`<div class="stats-row">
@@ -1744,8 +1885,20 @@ async function handleBulkFile(input){
   let rows=[];
   if(ext==='csv'){
     const text=await file.text();
+    // Proper CSV parser that handles quoted fields with commas inside
+    function parseCSVLine(line){
+      const result=[];let cur='';let inQ=false;
+      for(let i=0;i<line.length;i++){
+        const ch=line[i];
+        if(ch==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else{inQ=!inQ;}}
+        else if(ch===','&&!inQ){result.push(cur.trim());cur='';}
+        else{cur+=ch;}
+      }
+      result.push(cur.trim());
+      return result;
+    }
     const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
-    rows=lines.slice(1).map(l=>l.split(',').map(c=>c.trim()));
+    rows=lines.slice(1).map(l=>parseCSVLine(l));
   } else {
     const buf=await file.arrayBuffer();
     const wb=XLSX.read(buf,{type:'array'});
@@ -1783,6 +1936,7 @@ async function executeBulkImport(){
     await dbAdd('students',{name:name.trim(),studentId:(sid||'').trim(),gender:(gender||'').trim(),dob:(dob||'').trim(),classId:cls.id,parentName:(pname||'').trim(),parentPhone:(pphone||'').trim(),status:'active',createdAt:new Date().toISOString()});
     imported++;
   }
+  await audit('BULK_IMPORT',`${imported} students imported from file`);
   toast(`${imported} students imported`,'success');closeModal();renderStudentTable();
 }
 
@@ -2460,6 +2614,7 @@ function computeStudentClassScore(studentId){
 }
 
 function onWorkScoreInput(input){
+  _unsavedScores=true;
   const wid=input.dataset.wid,sid=+input.dataset.sid;
   const w=_scWorkItems.find(x=>x.id===wid);if(!w)return;
   const val=parseFloat(input.value);
@@ -2524,6 +2679,7 @@ function onExamInput(input){
   if(!isNaN(val)&&val>max)input.value=max;
   if(!_scFinalMap[sid])_scFinalMap[sid]={};
   _scFinalMap[sid].examScore=isNaN(val)?'':val;
+  _unsavedScores=true;
   refreshFinalRow(sid);
 }
 
@@ -2593,6 +2749,7 @@ async function saveAllWorkScores(){
       saved++;
     }
   }
+  _unsavedScores=false;
   await audit('SAVE_WORK_SCORES',`Subj ${scSubjectId} Class ${scClassId} | ${scTerm} ${scYear}`);
   toast(`✅ Work scores saved (${saved} entries)`,'success');
 }
@@ -2621,6 +2778,7 @@ async function saveFinalRecord(){
     if(ex){rec.id=ex.id;await dbPut('scores',rec);}else await dbAdd('scores',rec);
     saved++;
   }
+  _unsavedScores=false;
   await audit('SAVE_FINAL_RECORD',`Subj ${scSubjectId} Class ${scClassId} | ${scTerm} ${scYear} | ${saved} students`);
   toast(`✅ Final record saved for ${saved} students`,'success');
   // Refresh final map
@@ -2923,7 +3081,8 @@ async function saveRemark(studentId,term,year){
   if(existing){obj.id=existing.id;await dbPut('remarks',obj);}
   else await dbAdd('remarks',obj);
   
-  await audit('SAVE_REMARK',`Remarks for student ${studentId} — promo: ${finalPromo} by ${currentUser.role}`);
+  const _stForRmk=await dbGet('students',studentId).catch(()=>null);
+  await audit('SAVE_REMARK',`Remarks for ${_stForRmk?_stForRmk.name:'student '+studentId} — promo: ${finalPromo||'pending'} (${currentUser.role})`);
   toast('Remarks saved','success');closeModal();
   loadReportList();
 }
@@ -3260,7 +3419,11 @@ async function pgSettings(){
 
       <div class="card"><div class="card-header"><h3>📲 SMS / WhatsApp Alerts</h3></div><div class="card-body" style="display:flex;flex-direction:column;gap:12px">
         <div class="info-box" style="margin-bottom:0">Configure SMS/WhatsApp provider for fee alerts, attendance warnings, and term results. Supports Africa's Talking, Twilio, or WhatsApp Business API.</div>
-        <div class="fg"><label>SMS Provider</label><select id="sms-provider"><option value="africastalking">Africa's Talking</option><option value="twilio">Twilio</option><option value="bulk">BulkSMS</option></select></div>
+        <div class="fg"><label>SMS Provider</label><select id="sms-provider">
+          <option value="africastalking" ${cfg.smsProvider==='africastalking'||!cfg.smsProvider?'selected':''}>Africa's Talking</option>
+          <option value="twilio" ${cfg.smsProvider==='twilio'?'selected':''}>Twilio</option>
+          <option value="bulk" ${cfg.smsProvider==='bulk'?'selected':''}>BulkSMS</option>
+        </select></div>
         <div class="fg"><label>SMS API Key</label><input type="text" id="sms-apikey" value="${cfg.smsApiKey||''}" placeholder="Your SMS API key"></div>
         <div class="fg"><label>SMS Sender ID</label><input type="text" id="sms-from" value="${cfg.smsFrom||''}" placeholder="e.g. SCHOOL or +233XXXXXXXXX"></div>
         <div class="fg"><label style="display:flex;align-items:center;gap:8px">WhatsApp Business API Key <span class="alert-chip alert-chip-wa">WA</span></label><input type="text" id="wa-apikey" value="${cfg.waApiKey||''}" placeholder="WhatsApp API key"></div>
@@ -3278,6 +3441,8 @@ async function pgSettings(){
             <option value="en" ${currentLang==='en'?'selected':''}>🌐 English</option>
             <option value="fr" ${currentLang==='fr'?'selected':''}>🇫🇷 Français</option>
             <option value="tw" ${currentLang==='tw'?'selected':''}>🇬🇭 Twi</option>
+              <option value="ga" ${currentLang==='ga'?'selected':''}>🇬🇭 Ga</option>
+              <option value="ee" ${currentLang==='ee'?'selected':''}>🇬🇭 Ewe</option>
             <option value="ha" ${currentLang==='ha'?'selected':''}>🌍 Hausa</option>
           </select>
         </div>
@@ -3318,14 +3483,16 @@ async function updateMyPhoto(input){
 }
 
 async function saveSchoolCfg(){
-  await saveCfg('schoolName',document.getElementById('cfg-name').value);
-  await saveCfg('schoolMotto',document.getElementById('cfg-motto').value);
-  await saveCfg('schoolAddress',document.getElementById('cfg-addr').value);
-  await saveCfg('schoolPhone',document.getElementById('cfg-phone').value);
-  // saveCfg updates cfg[key] so these are now current
+  await saveCfg('schoolName',document.getElementById('cfg-name').value.trim()||'My School');
+  await saveCfg('schoolMotto',document.getElementById('cfg-motto').value.trim());
+  await saveCfg('schoolAddress',document.getElementById('cfg-addr').value.trim());
+  await saveCfg('schoolPhone',document.getElementById('cfg-phone').value.trim());
+  // cfg[key] is updated by saveCfg; reflect in topbar and auth screen immediately
   const nameEl=document.getElementById('topbar-school-name');
   if(nameEl)nameEl.innerHTML=cfg.schoolName.replace(' ','<br>');
-  await audit('SETTINGS_SCHOOL','Updated school info');
+  const authTitle=document.getElementById('auth-school-title');
+  if(authTitle)authTitle.textContent=cfg.schoolName;
+  await audit('SETTINGS_SCHOOL',`School info updated: ${cfg.schoolName}`);
   toast('School info saved','success');
 }
 async function uploadSchoolLogo(input){
@@ -3345,14 +3512,19 @@ async function saveAcademicCfg(){
   const csmax=parseInt(document.getElementById('cfg-csmax').value)||30;
   const esmax=parseInt(document.getElementById('cfg-esmax').value)||70;
   if(csmax+esmax!==100){toast('Class Score Max + Exam Score Max must sum to 100.','error');return;}
-  await saveCfg('academicYear',document.getElementById('cfg-year').value);
+  await saveCfg('academicYear',document.getElementById('cfg-year').value.trim());
   await saveCfg('currentTerm',document.getElementById('cfg-term').value);
   await saveCfg('gradingSystem',document.getElementById('cfg-grading').value);
   await saveCfg('classScoreMax',csmax);
   await saveCfg('examScoreMax',esmax);
   await saveCfg('passThreshold',parseInt(document.getElementById('cfg-pass').value)||50);
   await saveCfg('bestXSubjects',parseInt(document.getElementById('cfg-bestx').value)||0);
-  await audit('SETTINGS_ACADEMIC','Updated academic settings');
+  // Re-parse numerics after save so in-memory cfg reflects correct types
+  cfg.classScoreMax  = csmax;
+  cfg.examScoreMax   = esmax;
+  cfg.passThreshold  = parseInt(cfg.passThreshold)||50;
+  cfg.bestXSubjects  = parseInt(cfg.bestXSubjects)||0;
+  await audit('SETTINGS_ACADEMIC',`Academic settings updated — ${cfg.currentTerm} ${cfg.academicYear}`);
   toast('Academic settings saved','success');
 }
 async function saveEmailJSCfg(){
@@ -3369,10 +3541,17 @@ async function testEmailJS(){
   catch(e){toast('EmailJS error — check config','error');}
 }
 async function saveAccountInfo(){
-  currentUser.name=document.getElementById('acc-name').value.trim()||currentUser.name;
-  currentUser.email=document.getElementById('acc-email').value.trim();
+  const newName=document.getElementById('acc-name').value.trim();
+  const newEmail=document.getElementById('acc-email').value.trim();
+  if(newEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)){toast('Please enter a valid email address','error');return;}
+  if(newName)currentUser.name=newName;
+  currentUser.email=newEmail;
   await dbPut('users',currentUser);
+  // Update topbar display immediately
   document.getElementById('topbar-username').textContent=currentUser.name;
+  const avEl=document.getElementById('topbar-avatar');
+  if(avEl&&!currentUser.photo){avEl.textContent=initials(currentUser.name);}
+  await audit('UPDATE_ACCOUNT','Account info updated');
   toast('Account updated','success');
 }
 async function changePassword(){
@@ -3612,6 +3791,7 @@ async function pgNotices(){
                 </div>
               </div>
               ${isAdmin?`<div style="display:flex;gap:4px;flex-shrink:0">
+                <button class="btn btn-xs" onclick="editNotice(${n.id})">✏️ Edit</button>
                 <button class="btn btn-xs" onclick="togglePin(${n.id})">${n.pinned?'📌 Unpin':'📌 Pin'}</button>
                 <button class="btn btn-xs btn-danger" onclick="deleteNotice(${n.id})">Delete</button>
               </div>`:''}
@@ -3681,9 +3861,52 @@ async function saveNotice(){
 async function togglePin(id){
   const n=await dbGet('notices',id);n.pinned=!n.pinned;await dbPut('notices',n);pgNotices();
 }
+async function editNotice(id){
+  const n=await dbGet('notices',id);
+  if(!n)return;
+  openModal('Edit Notice',`
+    <div class="form-grid">
+      <div class="fg full"><label>Title *</label><input type="text" id="ntc-title" value="${escHtml(n.title)}"></div>
+      <div class="fg full"><label>Body *</label><textarea id="ntc-body" style="min-height:120px">${escHtml(n.body)}</textarea></div>
+      <div class="fg"><label>Priority</label>
+        <select id="ntc-priority">
+          <option value="normal" ${n.priority==='normal'?'selected':''}>Normal</option>
+          <option value="important" ${n.priority==='important'?'selected':''}>Important</option>
+          <option value="urgent" ${n.priority==='urgent'?'selected':''}>Urgent</option>
+        </select>
+      </div>
+      <div class="fg"><label>Target Audience</label>
+        <select id="ntc-target">
+          <option value="all" ${n.targetRole==='all'?'selected':''}>Everyone</option>
+          <option value="teacher" ${n.targetRole==='teacher'?'selected':''}>Teachers Only</option>
+          <option value="parent" ${n.targetRole==='parent'?'selected':''}>Parents Only</option>
+        </select>
+      </div>
+    </div>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button>
+     <button class="btn btn-primary" onclick="updateNotice(${id})">Save Changes</button>`
+  );
+}
+
+async function updateNotice(id){
+  const title=document.getElementById('ntc-title').value.trim();
+  const body=document.getElementById('ntc-body').value.trim();
+  if(!title||!body)return toast('Title and body required','error');
+  const n=await dbGet('notices',id);
+  n.title=title;n.body=body;
+  n.priority=document.getElementById('ntc-priority').value;
+  n.targetRole=document.getElementById('ntc-target').value;
+  n.editedAt=new Date().toISOString();
+  await dbPut('notices',n);
+  await audit('EDIT_NOTICE',title);
+  toast('Notice updated','success');closeModal();pgNotices();
+}
+
 async function deleteNotice(id){
   if(!confirm2('Delete this notice?'))return;
-  await dbDel('notices',id);toast('Notice deleted');pgNotices();
+  await dbDel('notices',id);
+  await audit('DELETE_NOTICE','Notice deleted');
+  toast('Notice deleted');pgNotices();
 }
 
 // ═══════════════════════════════════════════
@@ -4132,24 +4355,51 @@ async function pgAuditLog(){
   const[logs,users]=await Promise.all([dbGetAll('auditLog'),dbGetAll('users')]);
   const sorted=[...logs].sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
 
+  // Date-range filter options
+  const actionTypes=[...new Set(logs.map(l=>l.action).filter(Boolean))].sort();
+
   mc.innerHTML=`
     <div class="page-header">
-      <div><h2>Audit Log</h2><p>All system actions tracked with user and timestamp</p></div>
-      <button class="btn" onclick="exportAuditLog()">📤 Export</button>
+      <div><h2>🕵️ Audit Log</h2><p>All system actions tracked with user and timestamp</p></div>
+      <div class="page-header-actions">
+        <button class="btn" onclick="exportAuditLog()">📤 Export</button>
+        <button class="btn btn-danger" onclick="clearAuditLog()">🗑️ Clear Log</button>
+      </div>
     </div>
-    <div class="toolbar">
-      <input class="search-input" id="al-search" placeholder="🔍 Search actions…" oninput="filterAuditLog(this.value)">
+    <div class="toolbar" style="flex-wrap:wrap;gap:8px">
+      <input class="search-input" id="al-search" placeholder="🔍 Search actions, users…" oninput="filterAuditLog()">
       <select class="filter-select" id="al-user" onchange="filterAuditLog()">
         <option value="">All Users</option>
         ${[...new Set(logs.map(l=>l.userId))].map(uid=>{const u=users.find(x=>x.id===uid);return`<option value="${uid}">${u?u.name:'Unknown'}</option>`;}).join('')}
       </select>
+      <select class="filter-select" id="al-action" onchange="filterAuditLog()">
+        <option value="">All Actions</option>
+        ${actionTypes.map(a=>`<option value="${a}">${a}</option>`).join('')}
+      </select>
+      <input type="date" class="filter-select" id="al-date-from" onchange="filterAuditLog()" title="From date">
+      <input type="date" class="filter-select" id="al-date-to" onchange="filterAuditLog()" title="To date">
     </div>
     <div class="card">
-      <div class="card-header"><h3>Log Entries (${logs.length})</h3></div>
+      <div class="card-header">
+        <h3 id="al-count-label">Log Entries (${logs.length})</h3>
+        <span style="font-size:12px;color:var(--gray-400)">Showing up to 500 entries. Use Export for full history.</span>
+      </div>
       <div id="al-table">
         ${renderAuditRows(sorted)}
       </div>
     </div>`;
+}
+
+async function clearAuditLog(){
+  if(!confirm('Clear the entire Audit Log? This permanently deletes all audit history.'))return;
+  if(!confirm('Final confirmation — this cannot be undone. Proceed?'))return;
+  try{
+    await sbReq('DELETE','audit_log',null,'id=gte.0');
+    // Write a single record noting who cleared it, so there is always a paper trail
+    await dbAdd('auditLog',{userId:currentUser.id,userName:currentUser.name,role:currentUser.role,action:'AUDIT_LOG_CLEARED',detail:'Admin cleared the entire audit log',timestamp:new Date().toISOString()});
+    toast('Audit log cleared','success');
+    pgAuditLog();
+  }catch(e){toast('Failed to clear log: '+e.message,'error');}
 }
 
 function renderAuditRows(rows){
@@ -4157,7 +4407,7 @@ function renderAuditRows(rows){
   return`<div class="table-wrap"><table>
     <thead><tr><th>Time</th><th>User</th><th>Role</th><th>Action</th><th>Detail</th></tr></thead>
     <tbody>
-      ${rows.slice(0,200).map(l=>`<tr>
+      ${rows.slice(0,500).map(l=>`<tr>
         <td style="font-size:11px;color:var(--gray-400);white-space:nowrap">${new Date(l.timestamp).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
         <td>${l.userName||'—'}</td>
         <td><span class="badge ${l.role==='admin'?'badge-gold':l.role==='teacher'?'badge-teal':'badge-navy'}">${l.role||'—'}</span></td>
@@ -4168,15 +4418,26 @@ function renderAuditRows(rows){
   </table></div>`;
 }
 
-function filterAuditLog(searchVal){
-  dbGetAll('auditLog').then(logs=>{
-    const q=(searchVal||document.getElementById('al-search')?.value||'').toLowerCase();
-    const uid=document.getElementById('al-user')?.value;
-    let filtered=[...logs].sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
-    if(q)filtered=filtered.filter(l=>(l.action||'').toLowerCase().includes(q)||(l.detail||'').toLowerCase().includes(q)||(l.userName||'').toLowerCase().includes(q));
-    if(uid)filtered=filtered.filter(l=>l.userId==uid);
-    const tbl=document.getElementById('al-table');if(tbl)tbl.innerHTML=renderAuditRows(filtered);
-  });
+let _alFilterTimer=null;
+function filterAuditLog(){
+  clearTimeout(_alFilterTimer);
+  _alFilterTimer=setTimeout(()=>{
+    dbGetAll('auditLog').then(logs=>{
+      const q=(document.getElementById('al-search')?.value||'').toLowerCase();
+      const uid=document.getElementById('al-user')?.value||'';
+      const action=document.getElementById('al-action')?.value||'';
+      const dateFrom=document.getElementById('al-date-from')?.value||'';
+      const dateTo=document.getElementById('al-date-to')?.value||'';
+      let filtered=[...logs].sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
+      if(q)filtered=filtered.filter(l=>(l.action||'').toLowerCase().includes(q)||(l.detail||'').toLowerCase().includes(q)||(l.userName||'').toLowerCase().includes(q));
+      if(uid)filtered=filtered.filter(l=>String(l.userId)===String(uid));
+      if(action)filtered=filtered.filter(l=>l.action===action);
+      if(dateFrom)filtered=filtered.filter(l=>l.timestamp&&l.timestamp>=dateFrom);
+      if(dateTo)filtered=filtered.filter(l=>l.timestamp&&l.timestamp<=(dateTo+'T23:59:59'));
+      const tbl=document.getElementById('al-table');if(tbl)tbl.innerHTML=renderAuditRows(filtered);
+      const lbl=document.getElementById('al-count-label');if(lbl)lbl.textContent=`Log Entries (${filtered.length} of ${logs.length})`;
+    });
+  },200);
 }
 
 async function exportAuditLog(){
@@ -4221,10 +4482,14 @@ async function exportScoresToExcel(){
 }
 
 async function saveSecurityCfg(){
-  await saveCfg('sessionTimeout',parseInt(document.getElementById('cfg-timeout').value)||0);
-  await saveCfg('twoFactorEnabled',document.getElementById('cfg-2fa').checked);
-  await saveCfg('attendanceAlert',parseInt(document.getElementById('cfg-att-alert').value)||75);
+  cfg.sessionTimeout=parseInt(document.getElementById('cfg-timeout').value)||0;
+  cfg.twoFactorEnabled=document.getElementById('cfg-2fa').checked;
+  cfg.attendanceAlert=parseInt(document.getElementById('cfg-att-alert').value)||75;
+  await saveCfg('sessionTimeout',cfg.sessionTimeout);
+  await saveCfg('twoFactorEnabled',cfg.twoFactorEnabled);
+  await saveCfg('attendanceAlert',cfg.attendanceAlert);
   resetSessionTimer();
+  await audit('SETTINGS_SECURITY','Security settings updated');
   toast('Security settings saved','success');
 }
 
@@ -4356,13 +4621,15 @@ async function clearByTerm(store){
 }
 
 async function clearTable(tbl){
-  if(!confirm('DELETE ALL records in '+tbl+'? This is permanent and cannot be undone.'))return;
-  if(!confirm('Are you absolutely sure? All '+tbl+' data will be lost forever.'))return;
+  if(!confirm('DELETE ALL records in "'+tbl+'"? This is permanent and cannot be undone.'))return;
+  if(!confirm('Final confirmation: all data in "'+tbl+'" will be lost forever. Proceed?'))return;
   try{
-    await sbReq('DELETE',tbl,null,'id=gte.0');
-    toast('All '+tbl+' records deleted','success');
-    await audit('DELETE_ALL','All records deleted from '+tbl);
-  }catch(e){toast('Failed: '+e.message,'error');}
+    // Use id=gte.0 for numeric-id tables; for audit_log use a broad filter
+    const param=tbl==='audit_log'?'id=gte.0':'id=gte.0';
+    await sbReq('DELETE',tbl,null,param);
+    await audit('DELETE_ALL','Admin deleted all records from table: '+tbl);
+    toast('All records deleted from '+tbl,'success');
+  }catch(e){toast('Failed to clear '+tbl+': '+e.message,'error');}
 }
 
 
@@ -4978,10 +5245,23 @@ async function rolloverStep3(nextTerm,nextYear){
 }
 
 async function rolloverStep4(){
-  if(!confirm('Clear attendance counters for the new term?'))return;
-  await audit('ROLLOVER_STEP4','Attendance counters reset for new term');
-  document.querySelectorAll('.rollover-step')[3].classList.add('done');
-  toast('Attendance counters reset','success');
+  if(!confirm('Clear attendance counters for the new term? Previous term scores and remarks are preserved.'))return;
+  try{
+    // Delete term attendance summaries for the term we just rolled INTO (they start fresh)
+    const att=await dbGetAll('attendance');
+    const toDelete=att.filter(a=>a.term===cfg.currentTerm&&a.academicYear===cfg.academicYear);
+    for(const a of toDelete) await dbDel('attendance',a.id);
+    // Delete daily attendance records for the new term
+    await sbReq('DELETE','daily_attendance',null,'term=eq.'+encodeURIComponent(cfg.currentTerm)+'&academic_year=eq.'+encodeURIComponent(cfg.academicYear));
+    document.querySelectorAll('.rollover-step')[3].classList.add('done');
+    await audit('ROLLOVER_STEP4','Attendance counters reset for '+cfg.currentTerm+' '+cfg.academicYear);
+    toast('Attendance counters reset for new term','success');
+  }catch(e){
+    console.warn('Attendance reset error:',e);
+    document.querySelectorAll('.rollover-step')[3].classList.add('done');
+    await audit('ROLLOVER_STEP4','Attendance reset attempted — '+cfg.currentTerm+' '+cfg.academicYear);
+    toast('Attendance reset complete','success');
+  }
 }
 
 async function runFullRollover(nextTerm,nextYear){
@@ -5033,7 +5313,8 @@ async function pgParentPortal(){
             <td>${linkedSt?`<span class="badge badge-green">${linkedSt.name}</span>`:`<span style="color:var(--red);font-size:12px">No student linked (ID: ${u.studentId||'none'})</span>`}</td>
             <td><span class="badge ${u.status==='active'?'badge-green':u.status==='pending'?'badge-amber':'badge-red'}">${u.status}</span></td>
             <td><div style="display:flex;gap:6px">
-              <button class="btn btn-sm" onclick="linkParentToStudent(${u.id},'${u.studentId||''}')">🔗 Link</button>
+              <button class="btn btn-sm" onclick="linkParentToStudent(${u.id},'${u.studentId||''}')">🔗 ${linkedSt?'Re-link':'Link'}</button>
+              ${linkedSt?`<button class="btn btn-sm btn-danger" onclick="unlinkParent(${u.id})">✕ Unlink</button>`:''}
               ${u.status==='pending'?`<button class="btn btn-sm btn-success" onclick="approveUser(${u.id})">Approve</button>`:''}
             </div></td>
           </tr>`;
@@ -5065,6 +5346,14 @@ async function saveLinkParent(userId){
   toast('Parent linked to student','success');closeModal();pgParentPortal();
 }
 
+async function unlinkParent(userId){
+  if(!confirm('Remove student link from this parent account?'))return;
+  const u=await dbGet('users',userId);
+  u.studentId=null;await dbPut('users',u);
+  await audit('UNLINK_PARENT',`Parent ${u.name} unlinked from student`);
+  toast('Student unlinked from parent','success');pgParentPortal();
+}
+
 // ═══════════════════════════════════════════
 //  SMS / WHATSAPP ALERTS CONFIG (in Settings)
 // ═══════════════════════════════════════════
@@ -5080,15 +5369,15 @@ async function saveSmsConfig(){
 
 async function sendBulkSmsAlert(message,targetPhone=null){
   if(!cfg.smsApiKey){toast('SMS not configured. Add your Africa\'s Talking API key in Settings → Alerts.','error');return;}
-  const phone=targetPhone||(cfg.smsFrom||'');
+  // targetPhone must be an explicit recipient — cfg.smsFrom is the sender ID, not a recipient
+  const phone=(targetPhone||'').trim();
   if(!phone){toast('No recipient phone number specified.','error');return;}
-  // Africa's Talking SMS API
   try{
     const params=new URLSearchParams();
     params.append('username',cfg.smsFrom||'sandbox');
     params.append('to',phone);
     params.append('message',message);
-    params.append('from',''); // set in settings
+    if(cfg.smsFrom)params.append('from',cfg.smsFrom); // optional sender ID
     const res=await fetch('https://api.africastalking.com/version1/messaging',{
       method:'POST',
       headers:{'apiKey':cfg.smsApiKey,'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json'},
