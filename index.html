@@ -661,6 +661,14 @@ body.dark-mode #toast{background:#1E2E50;}
 
 <script>
 // ═══════════════════════════════════════════
+//  GLOBAL APP CONFIG STATE (Correction 1)
+// ═══════════════════════════════════════════
+window.AppConfig = {
+  settings: {},
+  isInitialized: false
+};
+
+// ═══════════════════════════════════════════
 //  CONFIG & CONSTANTS
 // ═══════════════════════════════════════════
 let emailjsCfg={serviceId:'',templateId:'',publicKey:''};
@@ -784,13 +792,15 @@ function toCamel(obj){
 // ═══════════════════════════════════════════
 //  SUPABASE HTTP LAYER
 // ═══════════════════════════════════════════
-async function sbReq(method, table, body=null, params=''){
+async function sbReq(method, table, body=null, params='', extraHeaders={}){
   const url=`${SUPABASE_URL}/rest/v1/${table}${params?'?'+params:''}`;
   const headers={
     'apikey': SUPABASE_ANON_KEY,
     'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
     'Content-Type': 'application/json',
     'Prefer': (method==='POST'||method==='PATCH')?'return=representation':'return=minimal',
+    // Merge any extra headers (e.g. resolution=merge-duplicates for settings upserts)
+    ...extraHeaders,
   };
   const opts={method, headers};
   if(body)opts.body=JSON.stringify(body);
@@ -914,17 +924,41 @@ async function loadConfig(){
   const titleEl = document.getElementById('auth-school-title');
   if(titleEl) titleEl.textContent = cfg.schoolName;
 
+  // Sync all loaded settings into window.AppConfig (Correction 2)
+  Object.assign(window.AppConfig.settings, cfg);
+  window.AppConfig.isInitialized = true;
+  // Update the banner if it exists (e.g. after settings page renders it)
+  const banner = document.getElementById('school-title-banner');
+  if(banner) banner.innerText = window.AppConfig.settings['schoolName'] || 'School Management System';
+
   if(emailjsCfg.publicKey) try{ emailjs.init(emailjsCfg.publicKey); }catch(e){}
 }
 async function saveCfg(key,value){
   cfg[key]=value;
-  // Upsert: try PATCH first, if no rows updated then POST
-  const existing=await sbReq('GET','settings',null,`key=eq.${encodeURIComponent(key)}&limit=1`);
-  if(existing&&existing.length){
-    await sbReq('PATCH','settings',{value:`${value}`},`key=eq.${encodeURIComponent(key)}`);
-  } else {
-    await sbReq('POST','settings',{key,value:`${value}`});
-  }
+  // Upsert with merge-duplicates — prevents insert conflicts on existing keys (Correction 3)
+  await sbReq('POST','settings',{key,value:`${value}`},'on_conflict=key',{'Prefer':'resolution=merge-duplicates'});
+  // Refresh local AppConfig cache
+  window.AppConfig.settings[key] = value;
+  // Hide initialization modal if still visible
+  const initModal = document.getElementById('initialization-modal');
+  if(initModal) initModal.style.display = 'none';
+}
+
+// ═══════════════════════════════════════════
+//  SETTINGS MODAL HELPERS (Correction 4)
+// ═══════════════════════════════════════════
+function openSettingsModal() {
+  const modal = document.getElementById('initialization-modal');
+  if(modal) modal.style.display = 'block';
+
+  // Pre-fill any input[name] or input[id] that matches a key in AppConfig.settings
+  Object.keys(window.AppConfig.settings).forEach(key => {
+    // Try by name attribute first, then by id
+    const input = document.querySelector(`[name="${key}"]`) || document.getElementById(`cfg-${key}`) || document.getElementById(key);
+    if(input && input.type !== 'checkbox' && input.type !== 'radio') {
+      input.value = window.AppConfig.settings[key] || '';
+    }
+  });
 }
 
 // ═══════════════════════════════════════════
@@ -4510,7 +4544,24 @@ async function init(){
   }
   await initDB();
   await seedAdmin();
-  await loadConfig();
+  // Robust config load — app works with defaults even if settings fetch fails (Correction 2)
+  try {
+    await loadConfig();
+  } catch(err) {
+    console.error('Settings load error (using defaults):', err);
+    // Ensure defaults are still applied even on failure
+    cfg.schoolName    = cfg.schoolName    || 'My School';
+    cfg.schoolMotto   = cfg.schoolMotto   || 'Excellence in Education';
+    cfg.currentTerm   = cfg.currentTerm   || 'Term 1';
+    cfg.academicYear  = cfg.academicYear  || '2024/2025';
+    cfg.gradingSystem = cfg.gradingSystem || 'ges';
+    cfg.classScoreMax = cfg.classScoreMax || 30;
+    cfg.examScoreMax  = cfg.examScoreMax  || 70;
+    cfg.passThreshold = cfg.passThreshold || 50;
+    cfg.sessionTimeout = cfg.sessionTimeout || 30;
+    cfg.attendanceAlert = cfg.attendanceAlert || 75;
+    window.AppConfig.settings = {...cfg};
+  }
   initTheme();
 }
 init();
