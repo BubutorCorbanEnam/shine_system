@@ -800,13 +800,18 @@ function toCamel(obj){
 // ═══════════════════════════════════════════
 async function sbReq(method, table, body=null, params='', extraHeaders={}){
   const url=`${SUPABASE_URL}/rest/v1/${table}${params?'?'+params:''}`;
+  // Build the base Prefer value, then append any extra Prefer directives from extraHeaders
+  // so both 'return=representation' and 'resolution=merge-duplicates' survive in one header.
+  const basePrefer=(method==='POST'||method==='PATCH')?'return=representation':'return=minimal';
+  const extraPrefer=extraHeaders['Prefer'];
+  const finalPrefer=extraPrefer?`${basePrefer},${extraPrefer}`:basePrefer;
+  const {Prefer:_drop, ...otherExtraHeaders}=extraHeaders; // remove Prefer from extras — already merged
   const headers={
     'apikey': SUPABASE_ANON_KEY,
     'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
     'Content-Type': 'application/json',
-    'Prefer': (method==='POST'||method==='PATCH')?'return=representation':'return=minimal',
-    // Merge any extra headers (e.g. resolution=merge-duplicates for settings upserts)
-    ...extraHeaders,
+    'Prefer': finalPrefer,
+    ...otherExtraHeaders,
   };
   const opts={method, headers};
   if(body)opts.body=JSON.stringify(body);
@@ -2989,23 +2994,25 @@ async function pgReports(){
 }
 async function loadReportList(){
   rptClassId=document.getElementById('rpt-class').value;if(!rptClassId)return;
-  const[students,classes]=await Promise.all([dbGetAll('students'),dbGetAll('classes')]);
+  const term=document.getElementById('rpt-term')?document.getElementById('rpt-term').value:rptTerm;
+  const year=document.getElementById('rpt-year')?document.getElementById('rpt-year').value:rptYear;
+  const[students,classes,allRemarks]=await Promise.all([dbGetAll('students'),dbGetAll('classes'),dbGetAll('remarks')]);
   const cls=classes.find(c=>c.id==rptClassId);
   const classStudents=students.filter(s=>s.classId==rptClassId).sort((a,b)=>a.name.localeCompare(b.name));
   document.getElementById('rpt-list').innerHTML=`<div class="card">
     <div class="card-header"><h3>${cls?cls.name:''} — ${classStudents.length} students</h3><button class="btn btn-primary" onclick="printAll()">🖨️ Print All</button></div>
     <div class="table-wrap"><table>
       <thead><tr><th>Student</th><th>ID</th><th></th></tr></thead>
-      <tbody>${classStudents.map(s=>`<tr>
+      <tbody>${classStudents.map(s=>{const r=allRemarks.find(rr=>rr.studentId===s.id&&rr.term===term&&rr.academicYear===year)||{};return`<tr>
         <td>${nameCell(s.name,'',s.photo||'')}</td>
         <td style="color:var(--gray-400);font-size:12px">${s.studentId||'—'}</td>
         <td><div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-sm" onclick="openRemarkModal(${s.id})">✏️ Remarks</button>
           <button class="btn btn-sm" onclick="previewReportCard(${s.id})">👁 Preview</button>
           <button class="btn btn-sm btn-primary" onclick="printOne(${s.id})">🖨️ Print</button>
-          ${(()=>{const r=allRemarks.find(rr=>rr.studentId===s.id&&rr.term===term&&rr.academicYear===year)||{};if(currentUser.role==='admin'&&(r.promoted==='recommended_yes'||r.promoted==='recommended_no')){return '<button class=\"btn btn-sm btn-success\" onclick=\"adminApprovePromotion('+s.id+',\'' + term + '\',\''+year +'\',true)\">✅ Approve</button><button class=\"btn btn-sm btn-danger\" onclick=\"adminApprovePromotion('+s.id+',\'' + term + '\',\''+year+'\',false)\">❌ Reject</button>';}return '';})()}
+          ${currentUser.role==='admin'&&(r.promoted==='recommended_yes'||r.promoted==='recommended_no')?`<button class="btn btn-sm btn-success" onclick="adminApprovePromotion(${s.id},'${term}','${year}',true)">✅ Approve</button><button class="btn btn-sm btn-danger" onclick="adminApprovePromotion(${s.id},'${term}','${year}',false)">❌ Reject</button>`:''}
         </div></td>
-      </tr>`).join('')}
+      </tr>`;}).join('')}
       </tbody>
     </table></div>
   </div>`;
@@ -3057,8 +3064,8 @@ async function openRemarkModal(studentId){
   }
   
   openModal(`Remarks — ${student.name}`,`
-    <div class="fg" style="margin-bottom:14px"><label>Class Teacher's Remarks</label><textarea id="rmk-teacher" style="min-height:80px">${remark.teacherRemark||''}</textarea></div>
-    <div class="fg" style="margin-bottom:14px"><label>Headmaster's Remarks</label><textarea id="rmk-head" style="min-height:80px">${remark.headRemark||''}</textarea></div>
+    <div class="fg" style="margin-bottom:14px"><label>Class Teacher's Remarks</label><textarea id="rmk-teacher" style="min-height:80px">${remark.classTeacherRemark||remark.teacherRemark||''}</textarea></div>
+    <div class="fg" style="margin-bottom:14px"><label>Headmaster's Remarks</label><textarea id="rmk-head" style="min-height:80px">${remark.headTeacherRemark||remark.headRemark||''}</textarea></div>
     <div class="fg" style="margin-bottom:14px"><label>Next Term Resumes</label><input type="date" id="rmk-resume" value="${remark.resumeDate||''}"></div>
     ${promoHtml}`,
     `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveRemark(${studentId},'${term}','${year}')">Save Remarks</button>`
@@ -3243,8 +3250,8 @@ function renderRC(data){
       <div>${remark.resumeDate?`<p><strong>Next Term Resumes:</strong> ${remark.resumeDate}</p>`:''}</div>
     </div>
     <div class="rc-rmk">
-      <p><strong>Class Teacher's Remarks:</strong></p><div class="rc-rmk-box">${remark.teacherRemark||''}</div>
-      <p><strong>Headmaster's Remarks:</strong></p><div class="rc-rmk-box">${remark.headRemark||''}</div>
+      <p><strong>Class Teacher's Remarks:</strong></p><div class="rc-rmk-box">${remark.classTeacherRemark||remark.teacherRemark||''}</div>
+      <p><strong>Headmaster's Remarks:</strong></p><div class="rc-rmk-box">${remark.headTeacherRemark||remark.headRemark||''}</div>
     </div>
     <div class="rc-promo">${(()=>{
       const p=remark.promoted;
@@ -3282,8 +3289,8 @@ async function previewReportCard(studentId){
         <tbody>${subjRows.filter(r=>r.total!=='').map(r=>`<tr${r.isFail?' style="background:#fff0f0"':''}><td style="padding:5px;border:1px solid #ccc">${r.name}</td><td style="text-align:center;padding:5px;border:1px solid #ccc">${r.cs}</td><td style="text-align:center;padding:5px;border:1px solid #ccc">${r.es}</td><td style="text-align:center;padding:5px;border:1px solid #ccc"><b>${r.total}</b></td><td style="text-align:center;padding:5px;border:1px solid #ccc" class="g-${r.grade}"><b>${r.grade}</b></td></tr>`).join('')}</tbody>
       </table>
       <p style="margin-top:8px"><b>Average:</b> ${avg||'—'} · <b>Aggregate:</b> ${agg||'—'}</p>
-      <p><b>Teacher Remarks:</b> ${remark.teacherRemark||'<em>None</em>'}</p>
-      <p><b>Head Remarks:</b> ${remark.headRemark||'<em>None</em>'}</p>
+      <p><b>Teacher Remarks:</b> ${remark.classTeacherRemark||remark.teacherRemark||'<em>None</em>'}</p>
+      <p><b>Head Remarks:</b> ${remark.headTeacherRemark||remark.headRemark||'<em>None</em>'}</p>
       <p><b>Promotion:</b> ${remark.promoted==='yes'?'✅ Promoted':remark.promoted==='no'?'🔁 Repeat':'⏳ Pending'}</p>
     </div>`,
     `<button class="btn" onclick="closeModal()">Close</button><button class="btn btn-primary" onclick="closeModal();printOne(${studentId})">🖨️ Print</button>`
@@ -3608,8 +3615,8 @@ async function saveEmailJSCfg(){
   const sId=document.getElementById('ejs-service').value.trim(),tId=document.getElementById('ejs-template').value.trim(),pKey=document.getElementById('ejs-pubkey').value.trim();
   await saveCfg('ejsServiceId',sId);await saveCfg('ejsTemplateId',tId);await saveCfg('ejsPublicKey',pKey);
   emailjsCfg={serviceId:sId,templateId:tId,publicKey:pKey};
-  if(pKey)try{emailjs.init(pKey);toast('EmailJS saved','success');}catch(e){}
-  else toast('EmailJS config saved');
+  if(pKey){try{emailjs.init(pKey);}catch(e){console.warn('EmailJS init error:',e);}}
+  toast('EmailJS config saved','success');
 }
 async function testEmailJS(){
   if(!emailjsCfg.serviceId)return toast('Configure EmailJS first','error');
@@ -3662,8 +3669,8 @@ async function pgMyReport(){
         <div class="table-wrap"><table><thead><tr><th>Subject</th><th style="text-align:center">Class</th><th style="text-align:center">Exam</th><th style="text-align:center">Total</th><th style="text-align:center">Grade</th></tr></thead>
         <tbody>${data.subjRows.filter(r=>r.total!=='').map(r=>`<tr${r.isFail?' style="background:rgba(176,32,32,.05)"':''}><td>${r.name}</td><td style="text-align:center">${r.cs}</td><td style="text-align:center">${r.es}</td><td style="text-align:center"><strong>${r.total}</strong></td><td style="text-align:center" class="${r.isFail?'fail-score':'g-'+r.grade}"><strong>${r.grade}</strong></td></tr>`).join('')}
         ${data.avg!==null?`<tr style="background:var(--gray-50)"><td><strong>Average</strong></td><td colspan="2"></td><td style="text-align:center"><strong>${data.avg}</strong></td><td style="text-align:center"><strong>Agg: ${data.agg}</strong></td></tr>`:''}</tbody></table></div>
-        ${data.remark.teacherRemark?`<div style="margin-top:16px;padding:12px;background:var(--gray-50);border-radius:8px;border-left:3px solid var(--gold)"><p style="font-size:11px;color:var(--gray-400);margin-bottom:4px">Class Teacher's Remarks</p><p style="font-size:13px">${data.remark.teacherRemark}</p></div>`:''}
-        ${data.remark.headRemark?`<div style="margin-top:8px;padding:12px;background:var(--gray-50);border-radius:8px;border-left:3px solid var(--navy)"><p style="font-size:11px;color:var(--gray-400);margin-bottom:4px">Headmaster's Remarks</p><p style="font-size:13px">${data.remark.headRemark}</p></div>`:''}
+        ${(data.remark.classTeacherRemark||data.remark.teacherRemark)?`<div style="margin-top:16px;padding:12px;background:var(--gray-50);border-radius:8px;border-left:3px solid var(--gold)"><p style="font-size:11px;color:var(--gray-400);margin-bottom:4px">Class Teacher's Remarks</p><p style="font-size:13px">${data.remark.classTeacherRemark||data.remark.teacherRemark}</p></div>`:''}
+        ${(data.remark.headTeacherRemark||data.remark.headRemark)?`<div style="margin-top:8px;padding:12px;background:var(--gray-50);border-radius:8px;border-left:3px solid var(--navy)"><p style="font-size:11px;color:var(--gray-400);margin-bottom:4px">Headmaster's Remarks</p><p style="font-size:13px">${data.remark.headTeacherRemark||data.remark.headRemark}</p></div>`:''}
       </div>
     </div>`;
 }
