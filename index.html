@@ -717,6 +717,7 @@ const FIELD_MAP = {
   toClassId:'to_class_id', doneBy:'done_by', createdBy:'created_by',
   classWeight:'class_weight', passThreshold:'pass_threshold',
   gradingSystem:'grading_system', gradingOverride:'grading_override', useCustom:'use_custom',
+  stream:'stream',
   classTotal:'class_total', workItemId:'work_item_id', maxScore:'max_score',
   classTeacherRemark:'class_teacher_remark', headTeacherRemark:'head_teacher_remark',
   // teacherRemark and headRemark are write-only aliases — only used when saving (toSnake);
@@ -886,27 +887,25 @@ async function dbGetByIndex(store, idx, val){
 //  SETTINGS
 // ═══════════════════════════════════════════
 let cfg={};
+// Safe helpers — used for display when settings may not yet be configured
+function cfgTerm(){return cfg.currentTerm||'(Term not set)';}
+function cfgYear(){return cfg.academicYear||'(Year not set)';}
+function cfgPassThreshold(){return cfg.passThreshold!=null?Number(cfg.passThreshold):50;}
+function cfgClassScoreMax(){return cfg.classScoreMax!=null?Number(cfg.classScoreMax):30;}
+function cfgExamScoreMax(){return cfg.examScoreMax!=null?Number(cfg.examScoreMax):70;}
+function cfgSchoolName(){return cfg.schoolName||'School Management System';}
 async function loadConfig(){
   const all=await dbGetAll('settings');
+  // Load all settings from DB — no hardcoded defaults; values stay exactly as stored
   all.forEach(s=>cfg[s.key]=s.value);
 
-  // ── Text / string settings ──────────────────────────────────────
-  cfg.schoolName    = cfg.schoolName    || 'My School';
-  cfg.schoolMotto   = cfg.schoolMotto   || 'Excellence in Education';
-  cfg.schoolAddress = cfg.schoolAddress || '';
-  cfg.schoolPhone   = cfg.schoolPhone   || '';
-  cfg.currentTerm   = cfg.currentTerm   || 'Term 1';
-  cfg.academicYear  = cfg.academicYear  || '2024/2025';
-  cfg.gradingSystem = cfg.gradingSystem || 'ges';
-  cfg.schoolLogo    = cfg.schoolLogo    || '';
-
-  // ── Numeric settings — must parse from string (Supabase stores everything as text) ──
-  cfg.classScoreMax   = parseInt(cfg.classScoreMax)   || 30;
-  cfg.examScoreMax    = parseInt(cfg.examScoreMax)    || 70;
-  cfg.bestXSubjects   = parseInt(cfg.bestXSubjects)   || 0;
-  cfg.passThreshold   = parseInt(cfg.passThreshold)   || 50;
-  cfg.sessionTimeout  = parseInt(cfg.sessionTimeout)  || 30;
-  cfg.attendanceAlert = parseInt(cfg.attendanceAlert) || 75;
+  // ── Numeric settings — parse from string (Supabase stores as text); 0 stays 0 ──
+  cfg.classScoreMax   = cfg.classScoreMax   !== undefined ? (parseInt(cfg.classScoreMax)   || 0) : undefined;
+  cfg.examScoreMax    = cfg.examScoreMax    !== undefined ? (parseInt(cfg.examScoreMax)    || 0) : undefined;
+  cfg.bestXSubjects   = cfg.bestXSubjects   !== undefined ? (parseInt(cfg.bestXSubjects)   || 0) : 0;
+  cfg.passThreshold   = cfg.passThreshold   !== undefined ? (parseInt(cfg.passThreshold)   || 0) : undefined;
+  cfg.sessionTimeout  = cfg.sessionTimeout  !== undefined ? (parseInt(cfg.sessionTimeout)  || 0) : 30;
+  cfg.attendanceAlert = cfg.attendanceAlert !== undefined ? (parseInt(cfg.attendanceAlert) || 0) : 75;
 
   // ── Boolean settings ────────────────────────────────────────────
   cfg.twoFactorEnabled = (cfg.twoFactorEnabled === 'true' || cfg.twoFactorEnabled === true);
@@ -916,25 +915,23 @@ async function loadConfig(){
   emailjsCfg.templateId = cfg.ejsTemplateId || '';
   emailjsCfg.publicKey  = cfg.ejsPublicKey  || '';
 
-  // ── v10 SMS / WhatsApp settings (was broken: used undefined var 'd') ──
-  cfg.smsProvider = cfg.smsProvider || 'africastalking';
+  // ── SMS / WhatsApp settings ──
+  cfg.smsProvider = cfg.smsProvider || '';
   cfg.smsApiKey   = cfg.smsApiKey   || '';
   cfg.smsFrom     = cfg.smsFrom     || '';
   cfg.waApiKey    = cfg.waApiKey    || '';
   cfg.waPhoneId   = cfg.waPhoneId   || '';
 
   // ── UI updates ──────────────────────────────────────────────────
+  const displayName = cfg.schoolName || 'School Records';
   const nameEl = document.getElementById('topbar-school-name');
-  if(nameEl) nameEl.innerHTML = cfg.schoolName.replace(' ','<br>');
+  if(nameEl) nameEl.innerHTML = displayName.replace(' ','<br>');
   const titleEl = document.getElementById('auth-school-title');
-  if(titleEl) titleEl.textContent = cfg.schoolName;
+  if(titleEl) titleEl.textContent = cfg.schoolName || 'School Management System';
 
-  // Sync all loaded settings into window.AppConfig (Correction 2)
+  // Sync into window.AppConfig
   Object.assign(window.AppConfig.settings, cfg);
   window.AppConfig.isInitialized = true;
-  // Update the banner if it exists (e.g. after settings page renders it)
-  const banner = document.getElementById('school-title-banner');
-  if(banner) banner.innerText = window.AppConfig.settings['schoolName'] || 'School Management System';
 
   if(emailjsCfg.publicKey) try{ emailjs.init(emailjsCfg.publicKey); }catch(e){}
 }
@@ -950,20 +947,11 @@ async function saveCfg(key,value){
 }
 
 // ═══════════════════════════════════════════
-//  SETTINGS MODAL HELPERS (Correction 4)
+//  SETTINGS HELPERS
 // ═══════════════════════════════════════════
 function openSettingsModal() {
-  const modal = document.getElementById('initialization-modal');
-  if(modal) modal.style.display = 'block';
-
-  // Pre-fill any input[name] or input[id] that matches a key in AppConfig.settings
-  Object.keys(window.AppConfig.settings).forEach(key => {
-    // Try by name attribute first, then by id
-    const input = document.querySelector(`[name="${key}"]`) || document.getElementById(`cfg-${key}`) || document.getElementById(key);
-    if(input && input.type !== 'checkbox' && input.type !== 'radio') {
-      input.value = window.AppConfig.settings[key] || '';
-    }
-  });
+  // Navigate to the settings page (admin only)
+  navigate('settings');
 }
 
 // ═══════════════════════════════════════════
@@ -1000,7 +988,7 @@ async function getGradingForClass(classId){
       if(custom.gradingSystem&&custom.gradingSystem!=='global') return{type:custom.gradingSystem};
     }
   }
-  return{type:cfg.gradingSystem};
+  return{type:cfg.gradingSystem||'ges'};
 }
 
 function gradeWithConfig(total,gradeCfg){
@@ -1026,7 +1014,7 @@ function gradeNum(g){
   return m[g]||9;
 }
 
-function isPass(total){return total>=cfg.passThreshold;}
+function isPass(total){return total>=cfgPassThreshold();}
 
 // ═══════════════════════════════════════════
 //  AUDIT LOG
@@ -1100,7 +1088,7 @@ async function handle2FA(user){
     try{
       await emailjs.send(emailjsCfg.serviceId,emailjsCfg.templateId,{
         to_email:user.email,to_name:user.name,
-        reset_code:code,school_name:cfg.schoolName+' — Login Code'
+        reset_code:code,school_name:cfgSchoolName()+' — Login Code'
       });
       sent=true;toast('Login code sent to '+user.email,'info');
     }catch(e){console.warn(e);}
@@ -1433,7 +1421,7 @@ async function sendResetCode(){
   resetState={userId:user.id,code,expiresAt:Date.now()+10*60*1000}; // 10-minute expiry
   let sent=false;
   if(emailjsCfg.serviceId&&emailjsCfg.templateId&&emailjsCfg.publicKey){
-    try{await emailjs.send(emailjsCfg.serviceId,emailjsCfg.templateId,{to_email:user.email,to_name:user.name,reset_code:code,school_name:cfg.schoolName});sent=true;toast('Reset code sent to '+user.email,'success');}catch(e){console.warn(e);}
+    try{await emailjs.send(emailjsCfg.serviceId,emailjsCfg.templateId,{to_email:user.email,to_name:user.name,reset_code:code,school_name:cfgSchoolName()});sent=true;toast('Reset code sent to '+user.email,'success');}catch(e){console.warn(e);}
   }
   if(!sent){toast('EmailJS not configured — Code: '+code,'info');setTimeout(()=>{document.getElementById('rst-code').value=code;},300);}
   showRstStep(2);
@@ -1444,7 +1432,7 @@ async function resendCode(){
   const code=String(Math.floor(100000+Math.random()*900000));
   resetState.code=code;resetState.expiresAt=Date.now()+10*60*1000;
   if(emailjsCfg.serviceId&&emailjsCfg.templateId&&emailjsCfg.publicKey){
-    try{await emailjs.send(emailjsCfg.serviceId,emailjsCfg.templateId,{to_email:user.email,to_name:user.name,reset_code:code,school_name:cfg.schoolName});toast('New code sent!','success');return;}catch(e){}
+    try{await emailjs.send(emailjsCfg.serviceId,emailjsCfg.templateId,{to_email:user.email,to_name:user.name,reset_code:code,school_name:cfgSchoolName()});toast('New code sent!','success');return;}catch(e){}
   }
   toast('Code: '+code,'info');document.getElementById('rst-code').value=code;
 }
@@ -1490,7 +1478,12 @@ function launchApp(){
     document.querySelectorAll('.lang-selector').forEach(el=>el.value=cfg.language);
   }
   if(cfg.darkMode==='true'&&!darkMode){toggleDarkMode();}
-  navigate('dashboard');
+  // First-run: redirect admin to settings if school name hasn't been configured
+  if(currentUser.role==='admin'&&!cfg.schoolName){
+    navigate('settings');
+  } else {
+    navigate('dashboard');
+  }
 }
 
 // SIDEBAR
@@ -1675,7 +1668,12 @@ async function pgDashboard(){
   const pending=users.filter(u=>u.status==='pending').length;
   const activeStudents=students.filter(s=>s.status==='active'||!s.status);
 
-  let html=`<div class="page-header"><div><h2>Welcome back, ${currentUser.name.split(' ')[0]} 👋</h2><p>${cfg.currentTerm} · ${cfg.academicYear}</p></div></div>`;
+  let html=`<div class="page-header"><div><h2>Welcome back, ${currentUser.name.split(' ')[0]} 👋</h2><p>${cfgTerm()} · ${cfgYear()}</p></div></div>`;
+
+  // Settings setup banner — shown when admin hasn't configured term/year yet
+  if(role==='admin'&&(!cfg.currentTerm||!cfg.academicYear)){
+    html+=`<div class="warn-box" style="cursor:pointer;margin-bottom:16px" onclick="navigate('settings')">⚙️ <strong>Setup required:</strong> Academic Year and Current Term are not yet configured. <span style="color:var(--navy);font-weight:600">Go to Settings →</span></div>`;
+  }
 
   if(role==='admin'&&pending>0){
     html+=`<div class="pending-banner"><div class="icon">⏳</div><div><h4>${pending} teacher account${pending>1?'s':''} awaiting approval</h4><p>Review and approve new teacher registrations.</p></div><button class="btn btn-gold" style="margin-left:auto" onclick="navigate('users')">Review Now</button></div>`;
@@ -2181,7 +2179,7 @@ async function openCustomGradeModal(classId){
     <div class="fg" style="margin-bottom:14px">
       <label>Use for this class</label>
       <select id="cg-type" onchange="toggleCustomGradeTable(this.value)">
-        <option value="global" ${!existing||!existing.useCustom?'selected':''}>Global Setting (${cfg.gradingSystem.toUpperCase()})</option>
+        <option value="global" ${!existing||!existing.useCustom?'selected':''}>Global Setting (${(cfg.gradingSystem||'ges').toUpperCase()})</option>
         <option value="ges" ${existing&&existing.gradingSystem==='ges'&&!existing.useCustom?'selected':''}>GES (A1–F9)</option>
         <option value="simple" ${existing&&existing.gradingSystem==='simple'&&!existing.useCustom?'selected':''}>Simple (A–F)</option>
         <option value="custom" ${existing&&existing.useCustom?'selected':''}>Custom Bands</option>
@@ -2268,7 +2266,7 @@ async function pgSubjects(){
         <tbody>${subjects.map(s=>{
           const sa=assignments.find(a=>a.subjectId===s.id&&!a.classId);
           const t=sa?teachers.find(u=>u.id===sa.teacherId):null;
-          const passmark=s.passThreshold||cfg.passThreshold||50;
+          const passmark=s.passThreshold||cfgPassThreshold();
           return`<tr>
             <td><strong>${s.name}</strong></td>
             <td>${s.classWeight||30}%</td>
@@ -2290,7 +2288,7 @@ async function openSubjectModal(id){
   openModal(s?'Edit Subject':'Add Subject',`
     <div class="fg" style="margin-bottom:14px"><label>Subject Name *</label><input type="text" id="fsubj-name" value="${s?s.name:''}" placeholder="e.g. Mathematics"></div>
     <div class="fg" style="margin-bottom:14px"><label>Class Score Weight (%) — default 30</label><input type="number" id="fsubj-cw" value="${s?s.classWeight||30:30}" min="10" max="60"></div>
-    <div class="fg" style="margin-bottom:14px"><label>Pass Threshold (%) — overrides global setting</label><input type="number" id="fsubj-pass" value="${s?s.passThreshold||cfg.passThreshold||50:cfg.passThreshold||50}" min="0" max="100"></div>
+    <div class="fg" style="margin-bottom:14px"><label>Pass Threshold (%) — overrides global setting</label><input type="number" id="fsubj-pass" value="${s?s.passThreshold||cfgPassThreshold():cfgPassThreshold()}" min="0" max="100"></div>
     <p style="font-size:12px;color:var(--gray-400)">Exam weight: ${100-(s?s.classWeight||30:30)}%</p>`,
     `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveSubject(${id||'null'})">${s?'Update':'Add'}</button>`
   );
@@ -2299,7 +2297,7 @@ async function openSubjectModal(id){
 async function saveSubject(id){
   const name=document.getElementById('fsubj-name').value.trim();
   if(!name)return alert('Subject name required');
-  const obj={name,classWeight:parseInt(document.getElementById('fsubj-cw').value)||30,passThreshold:parseInt(document.getElementById('fsubj-pass').value)||cfg.passThreshold||50};
+  const obj={name,classWeight:parseInt(document.getElementById('fsubj-cw').value)||30,passThreshold:parseInt(document.getElementById('fsubj-pass').value)||cfgPassThreshold()};
   if(id){obj.id=id;await dbPut('subjects',obj);toast('Subject updated','success');}
   else{await dbAdd('subjects',obj);toast('Subject added','success');}
   closeModal();pgSubjects();
@@ -2393,8 +2391,8 @@ async function pgScores(){
     myClasses=hasSchoolWide?classes:classes.filter(c=>myClassIds.has(c.id)||myClassIds.has(parseInt(c.id)));
   }
 
-  scTerm=scTerm||cfg.currentTerm;
-  scYear=scYear||cfg.academicYear;
+  scTerm=scTerm||cfg.currentTerm||'';
+  scYear=scYear||cfg.academicYear||'';
 
   mc.innerHTML=`
     <div class="page-header">
@@ -2502,14 +2500,14 @@ function renderScoreTable(){
   const wrap=document.getElementById('score-wrap');
   if(!wrap||!_scSubjectObj)return;
   const subj=_scSubjectObj;
-  const examMax=cfg.examScoreMax||70;
+  const examMax=cfgExamScoreMax();
   const today=new Date().toISOString().substring(0,10);
 
   let html=`<div style="border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-md)">
     <div class="sc2-header">
       <div>
         <h3>📚 ${subj.name} — ${scTerm}, ${scYear}</h3>
-        <div class="sc2-subheader">Class Total weight: <strong>30%</strong> &nbsp;|&nbsp; Exam weight: <strong>${examMax}%</strong> &nbsp;|&nbsp; Pass mark: <strong>${cfg.passThreshold||50}%</strong></div>
+        <div class="sc2-subheader">Class Total weight: <strong>30%</strong> &nbsp;|&nbsp; Exam weight: <strong>${examMax}%</strong> &nbsp;|&nbsp; Pass mark: <strong>${cfgPassThreshold()}%</strong></div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-gold btn-sm" onclick="saveAllWorkScores()">💾 Save Scores</button>
@@ -2608,7 +2606,7 @@ function renderScoreTable(){
           const finalRec=_scFinalMap[st.id];
           const examVal=finalRec?.examScore!==undefined?finalRec.examScore:'';
           const grandTotal=examVal!==''?Math.round(classWeighted+parseFloat(examVal)):'';
-          const isFail=grandTotal!==''&&grandTotal<(cfg.passThreshold||50);
+          const isFail=grandTotal!==''&&grandTotal<(cfgPassThreshold());
           const gr=grandTotal!==''?gradeWithConfig(grandTotal,_scGradeCfg):null;
           return`<tr>
             <td>${nameCell(st.name,st.studentId,st.photo||'')}</td>
@@ -2648,7 +2646,7 @@ function computeStudentClassScore(studentId){
   if(count===0)return{classRaw:null,classWeighted:null};
   // Average percentage across SCORED items only (not all items) then scale to classScoreMax
   const avgPct=totalPct/count;
-  const classWeighted=(avgPct/100)*(cfg.classScoreMax||30);
+  const classWeighted=(avgPct/100)*(cfgClassScoreMax());
   return{classRaw:avgPct,classWeighted};
 }
 
@@ -2704,7 +2702,7 @@ function refreshFinalRow(studentId){
   const examInp=document.getElementById(`fr-exam-${studentId}`);
   const examVal=examInp?parseFloat(examInp.value):NaN;
   const grandTotal=(!isNaN(examVal)&&classWeighted!==null)?Math.round(classWeighted+examVal):'';
-  const isFail=grandTotal!==''&&grandTotal<(cfg.passThreshold||50);
+  const isFail=grandTotal!==''&&grandTotal<(cfgPassThreshold());
   const gr=grandTotal!==''?gradeWithConfig(grandTotal,_scGradeCfg):null;
   if(totEl)totEl.textContent=grandTotal!==''?grandTotal:'—';
   if(grEl)grEl.innerHTML=gr?`<span class="${isFail?'fail-score':'g-'+gr.g}" style="font-size:14px;font-weight:700">${gr.g}</span>`:'—';
@@ -2714,7 +2712,7 @@ function refreshFinalRow(studentId){
 function onExamInput(input){
   const sid=+input.dataset.student;
   const val=parseFloat(input.value);
-  const max=cfg.examScoreMax||70;
+  const max=cfgExamScoreMax();
   if(!isNaN(val)&&val>max)input.value=max;
   if(!_scFinalMap[sid])_scFinalMap[sid]={};
   _scFinalMap[sid].examScore=isNaN(val)?'':val;
@@ -3134,7 +3132,7 @@ async function executeClassPromotion(studentId){
     // Check academic performance and warn if student has failing scores
     const allScores=await dbGetAll('scores');
     const termScores=allScores.filter(s=>s.studentId===studentId&&s.term===cfg.currentTerm&&s.academicYear===cfg.academicYear);
-    const failCount=termScores.filter(s=>(s.total||0)<(cfg.passThreshold||50)).length;
+    const failCount=termScores.filter(s=>(s.total||0)<(cfgPassThreshold())).length;
     if(failCount>0&&!confirm(`⚠️ ${student.name} has ${failCount} failing subject(s) this term. Proceed with promotion anyway?`))return;
     const classes=await dbGetAll('classes');
     const ALL_LVL=['Creche','Nursery 1','Nursery 2','KG 1','KG 2','Basic 1','Basic 2','Basic 3','Basic 4','Basic 5','Basic 6','JHS 1','JHS 2','JHS 3'];
@@ -3193,7 +3191,7 @@ async function buildReport(studentId,term,year){
 
   const subjRows=subjects.map(s=>{
     const sc=scoreMap[s.id];const gr=sc&&sc.total!==null?gradeWithConfig(sc.total,gradeCfg):null;
-    const isFail=sc&&sc.total!==null&&sc.total<(s.passThreshold||cfg.passThreshold||50);
+    const isFail=sc&&sc.total!==null&&sc.total<(s.passThreshold||cfgPassThreshold());
     return{name:s.name,cs:sc?sc.classScore:'',es:sc?sc.examScore:'',total:sc?sc.total:'',grade:gr?gr.g:'',remark:gr?gr.r:'',isFail};
   });
 
@@ -3209,7 +3207,7 @@ function renderRC(data){
     <div class="rc-hdr">
       ${cfg.schoolLogo?'<img src="'+cfg.schoolLogo+'" class="rc-logo" alt="School Logo" style="width:60px;height:60px;object-fit:contain;margin-bottom:6px;display:block;margin-left:auto;margin-right:auto">':'<div style=\"font-size:32px;text-align:center;margin-bottom:4px\">🏫</div>'}
       ${student.photo?`<img src="${student.photo}" class="rc-photo" alt="${student.name}">`:''}
-      <div class="rc-school">${cfg.schoolName}</div>
+      <div class="rc-school">${cfgSchoolName()}</div>
       ${cfg.schoolMotto?`<div class="rc-addr" style="font-style:italic">"${cfg.schoolMotto}"</div>`:''}
       ${cfg.schoolAddress?`<div class="rc-addr">${cfg.schoolAddress}</div>`:''}
       ${cfg.schoolPhone?`<div class="rc-addr">Tel: ${cfg.schoolPhone}</div>`:''}
@@ -3224,7 +3222,7 @@ function renderRC(data){
       <div class="row"><span class="lbl">Class Size:</span><span class="val">${classSize}</span></div>
     </div>
     <table class="rc-tbl">
-      <thead><tr><th>Subject</th><th>Class Score (${cfg.classScoreMax})</th><th>Exam Score (${cfg.examScoreMax})</th><th>Total (100)</th><th>Grade</th><th>Remark</th></tr></thead>
+      <thead><tr><th>Subject</th><th>Class Score (${cfgClassScoreMax()})</th><th>Exam Score (${cfgExamScoreMax()})</th><th>Total (100)</th><th>Grade</th><th>Remark</th></tr></thead>
       <tbody>
         ${subjRows.map(r=>`<tr${r.isFail?' style="background:#fff0f0"':''}>
           <td>${r.name}</td><td>${r.cs!==''?r.cs:'—'}</td><td>${r.es!==''?r.es:'—'}</td>
@@ -3272,7 +3270,7 @@ async function previewReportCard(studentId){
     <div style="font-size:12px;max-height:500px;overflow-y:auto">
       <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:12px">
         ${student.photo?`<img src="${student.photo}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;float:right;border:2px solid var(--gold)">`:''}
-        <div style="font-size:15px;font-weight:bold">${cfg.schoolName}</div>
+        <div style="font-size:15px;font-weight:bold">${cfgSchoolName()}</div>
         <div style="font-size:13px;font-weight:bold;margin-top:4px">Terminal Report — ${term}</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:10px">
@@ -3392,15 +3390,18 @@ async function createUser(){
 async function pgSettings(){
   const mc=document.getElementById('main-content');
   const isAdmin=currentUser.role==='admin';
+  // Detect first-run: school name not yet set
+  const isFirstRun = isAdmin && !cfg.schoolName;
   mc.innerHTML=`
-    <div class="page-header"><div><h2>Settings</h2></div></div>
+    <div class="page-header"><div><h2>⚙️ Settings</h2><p>All settings are saved to the database and take effect immediately.</p></div></div>
+    ${isFirstRun?`<div class="warn-box" style="margin-bottom:20px">🎉 <strong>Welcome! First-time setup detected.</strong> Please fill in your school information and academic settings below, then click Save. All fields are optional — you can update them at any time.</div>`:''}
     <div style="display:grid;grid-template-columns:${isAdmin?'1fr 1fr':'1fr'};gap:16px;max-width:900px">
       ${isAdmin?`
       <div class="card"><div class="card-header"><h3>🏫 School Information</h3></div><div class="card-body" style="display:flex;flex-direction:column;gap:12px">
-        <div class="fg"><label>School Name</label><input type="text" id="cfg-name" value="${cfg.schoolName||''}"></div>
-        <div class="fg"><label>Motto</label><input type="text" id="cfg-motto" value="${cfg.schoolMotto||''}"></div>
-        <div class="fg"><label>Address</label><input type="text" id="cfg-addr" value="${cfg.schoolAddress||''}"></div>
-        <div class="fg"><label>Phone</label><input type="tel" id="cfg-phone" value="${cfg.schoolPhone||''}"></div>
+        <div class="fg"><label>School Name</label><input type="text" id="cfg-name" value="${escHtml(cfg.schoolName||'')}" placeholder="e.g. Sunshine Basic School"></div>
+        <div class="fg"><label>Motto</label><input type="text" id="cfg-motto" value="${escHtml(cfg.schoolMotto||'')}" placeholder="e.g. Excellence in Education"></div>
+        <div class="fg"><label>Address</label><input type="text" id="cfg-addr" value="${escHtml(cfg.schoolAddress||'')}" placeholder="School's physical address"></div>
+        <div class="fg"><label>Phone</label><input type="tel" id="cfg-phone" value="${escHtml(cfg.schoolPhone||'')}" placeholder="e.g. +233 20 000 0000"></div>
         <div class="fg"><label>School Logo (shown on report cards)</label>
           ${cfg.schoolLogo?'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><img src="'+cfg.schoolLogo+'" style="width:52px;height:52px;object-fit:contain;border-radius:8px;border:1px solid var(--gray-200)"><button class="btn btn-sm btn-danger" onclick="removeSchoolLogo()">Remove Logo</button></div>':''}
           <div class="photo-upload-area" style="padding:12px">
@@ -3408,50 +3409,72 @@ async function pgSettings(){
             <div style="font-size:12px;color:var(--gray-400)">📷 Click to upload school logo (PNG, JPG)</div>
           </div>
         </div>
-        <button class="btn btn-primary" onclick="saveSchoolCfg()">Save School Info</button>
+        <button class="btn btn-primary" onclick="saveSchoolCfg()">💾 Save School Info</button>
       </div></div>
 
       <div class="card"><div class="card-header"><h3>📅 Academic Settings</h3></div><div class="card-body" style="display:flex;flex-direction:column;gap:12px">
-        <div class="fg"><label>Academic Year</label><input type="text" id="cfg-year" value="${cfg.academicYear||'2024/2025'}"></div>
-        <div class="fg"><label>Current Term</label><select id="cfg-term"><option value="Term 1" ${cfg.currentTerm==='Term 1'?'selected':''}>Term 1</option><option value="Term 2" ${cfg.currentTerm==='Term 2'?'selected':''}>Term 2</option><option value="Term 3" ${cfg.currentTerm==='Term 3'?'selected':''}>Term 3</option></select></div>
-        <div class="fg"><label>Default Grading System</label><select id="cfg-grading"><option value="ges" ${cfg.gradingSystem==='ges'?'selected':''}>GES (A1–F9)</option><option value="simple" ${cfg.gradingSystem==='simple'?'selected':''}>Simple (A–F)</option></select></div>
-        <div class="fg"><label>Class Score Max</label><input type="number" id="cfg-csmax" value="${cfg.classScoreMax||30}" min="10" max="60"></div>
-        <div class="fg"><label>Exam Score Max</label><input type="number" id="cfg-esmax" value="${cfg.examScoreMax||70}" min="40" max="90"></div>
-        <div class="fg"><label>Global Pass Threshold (%)</label><input type="number" id="cfg-pass" value="${cfg.passThreshold||50}" min="0" max="100"></div>
-        <div class="fg"><label>Best X Subjects for Aggregate (0 = all)</label><input type="number" id="cfg-bestx" value="${cfg.bestXSubjects||0}" min="0" max="20"></div>
-        <button class="btn btn-primary" onclick="saveAcademicCfg()">Save Academic Settings</button>
+        <div class="fg"><label>Academic Year <span style="color:var(--red)">*</span></label><input type="text" id="cfg-year" value="${escHtml(cfg.academicYear||'')}" placeholder="e.g. 2024/2025"></div>
+        <div class="fg"><label>Current Term <span style="color:var(--red)">*</span></label>
+          <select id="cfg-term">
+            <option value="">— Select Term —</option>
+            <option value="Term 1" ${cfg.currentTerm==='Term 1'?'selected':''}>Term 1</option>
+            <option value="Term 2" ${cfg.currentTerm==='Term 2'?'selected':''}>Term 2</option>
+            <option value="Term 3" ${cfg.currentTerm==='Term 3'?'selected':''}>Term 3</option>
+          </select>
+        </div>
+        <div class="fg"><label>Default Grading System</label>
+          <select id="cfg-grading">
+            <option value="">— Select Grading —</option>
+            <option value="ges" ${cfg.gradingSystem==='ges'?'selected':''}>GES (A1–F9)</option>
+            <option value="simple" ${cfg.gradingSystem==='simple'?'selected':''}>Simple (A–F)</option>
+          </select>
+        </div>
+        <div class="fg"><label>Class Score Max <span style="font-size:11px;color:var(--gray-400)">(must sum to 100 with Exam)</span></label>
+          <input type="number" id="cfg-csmax" value="${cfg.classScoreMax!==undefined?cfg.classScoreMax:''}" min="10" max="60" placeholder="e.g. 30">
+        </div>
+        <div class="fg"><label>Exam Score Max</label>
+          <input type="number" id="cfg-esmax" value="${cfg.examScoreMax!==undefined?cfg.examScoreMax:''}" min="40" max="90" placeholder="e.g. 70">
+        </div>
+        <div class="fg"><label>Global Pass Threshold (%)</label>
+          <input type="number" id="cfg-pass" value="${cfg.passThreshold!==undefined?cfg.passThreshold:''}" min="0" max="100" placeholder="e.g. 50">
+        </div>
+        <div class="fg"><label>Best X Subjects for Aggregate <span style="font-size:11px;color:var(--gray-400)">(0 = all subjects)</span></label>
+          <input type="number" id="cfg-bestx" value="${cfg.bestXSubjects!==undefined?cfg.bestXSubjects:''}" min="0" max="20" placeholder="e.g. 0">
+        </div>
+        <button class="btn btn-primary" onclick="saveAcademicCfg()">💾 Save Academic Settings</button>
       </div></div>
 
       <div class="card"><div class="card-header"><h3>🔒 Security Settings</h3></div><div class="card-body" style="display:flex;flex-direction:column;gap:12px">
         <div class="fg">
           <label>Session Timeout (minutes, 0 = disabled)</label>
-          <input type="number" id="cfg-timeout" value="${cfg.sessionTimeout||30}" min="0" max="480">
+          <input type="number" id="cfg-timeout" value="${cfg.sessionTimeout!==undefined?cfg.sessionTimeout:''}" min="0" max="480" placeholder="e.g. 30">
         </div>
         <div class="fg">
           <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
             <input type="checkbox" id="cfg-2fa" ${cfg.twoFactorEnabled?'checked':''} style="width:16px;height:16px">
-            Enable Two-Factor Authentication (admin & teacher accounts)
+            Enable Two-Factor Authentication (admin &amp; teacher accounts)
           </label>
           <span style="font-size:11px;color:var(--gray-400)">Requires EmailJS to be configured below</span>
         </div>
         <div class="fg">
           <label>Attendance Alert Threshold (%)</label>
-          <input type="number" id="cfg-att-alert" value="${cfg.attendanceAlert||75}" min="0" max="100">
+          <input type="number" id="cfg-att-alert" value="${cfg.attendanceAlert!==undefined?cfg.attendanceAlert:''}" min="0" max="100" placeholder="e.g. 75">
           <span style="font-size:11px;color:var(--gray-400)">Students below this attendance % will be flagged</span>
         </div>
-        <button class="btn btn-primary" onclick="saveSecurityCfg()">Save Security Settings</button>
+        <button class="btn btn-primary" onclick="saveSecurityCfg()">💾 Save Security Settings</button>
       </div></div>
 
       <div class="card"><div class="card-header"><h3>📧 EmailJS Config</h3></div><div class="card-body" style="display:flex;flex-direction:column;gap:12px">
         <div class="info-box" style="margin-bottom:0">Configure EmailJS for password reset and 2FA codes.<br>Template variables: <code>{{to_email}}</code> <code>{{reset_code}}</code> <code>{{school_name}}</code></div>
-        <div class="fg"><label>Service ID</label><input type="text" id="ejs-service" value="${cfg.ejsServiceId||''}" placeholder="service_xxx"></div>
-        <div class="fg"><label>Template ID</label><input type="text" id="ejs-template" value="${cfg.ejsTemplateId||''}" placeholder="template_xxx"></div>
-        <div class="fg"><label>Public Key</label><input type="text" id="ejs-pubkey" value="${cfg.ejsPublicKey||''}" placeholder="Your public key"></div>
-        <button class="btn btn-primary" onclick="saveEmailJSCfg()">Save EmailJS</button>
+        <div class="fg"><label>Service ID</label><input type="text" id="ejs-service" value="${escHtml(cfg.ejsServiceId||'')}" placeholder="service_xxx"></div>
+        <div class="fg"><label>Template ID</label><input type="text" id="ejs-template" value="${escHtml(cfg.ejsTemplateId||'')}" placeholder="template_xxx"></div>
+        <div class="fg"><label>Public Key</label><input type="text" id="ejs-pubkey" value="${escHtml(cfg.ejsPublicKey||'')}" placeholder="Your public key"></div>
+        <button class="btn btn-primary" onclick="saveEmailJSCfg()">💾 Save EmailJS</button>
         <button class="btn" onclick="testEmailJS()">📤 Send Test Email</button>
       </div></div>
 
       <div class="card"><div class="card-header"><h3>⚡ Quick Setup</h3></div><div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+        <p style="font-size:12px;color:var(--gray-400)">Populate the database with default Ghanaian school structure.</p>
         <button class="btn" onclick="loadDefaultClasses()">🏷️ Load Default Classes (Preschool–JHS 3)</button>
         <button class="btn" onclick="loadGESSubjects()">📚 Load GES Subjects</button>
       </div></div>
@@ -3459,15 +3482,16 @@ async function pgSettings(){
       <div class="card"><div class="card-header"><h3>📲 SMS / WhatsApp Alerts</h3></div><div class="card-body" style="display:flex;flex-direction:column;gap:12px">
         <div class="info-box" style="margin-bottom:0">Configure SMS/WhatsApp provider for fee alerts, attendance warnings, and term results. Supports Africa's Talking, Twilio, or WhatsApp Business API.</div>
         <div class="fg"><label>SMS Provider</label><select id="sms-provider">
-          <option value="africastalking" ${cfg.smsProvider==='africastalking'||!cfg.smsProvider?'selected':''}>Africa's Talking</option>
+          <option value="">— Select Provider —</option>
+          <option value="africastalking" ${cfg.smsProvider==='africastalking'?'selected':''}>Africa's Talking</option>
           <option value="twilio" ${cfg.smsProvider==='twilio'?'selected':''}>Twilio</option>
           <option value="bulk" ${cfg.smsProvider==='bulk'?'selected':''}>BulkSMS</option>
         </select></div>
-        <div class="fg"><label>SMS API Key</label><input type="text" id="sms-apikey" value="${cfg.smsApiKey||''}" placeholder="Your SMS API key"></div>
-        <div class="fg"><label>SMS Sender ID</label><input type="text" id="sms-from" value="${cfg.smsFrom||''}" placeholder="e.g. SCHOOL or +233XXXXXXXXX"></div>
-        <div class="fg"><label style="display:flex;align-items:center;gap:8px">WhatsApp Business API Key <span class="alert-chip alert-chip-wa">WA</span></label><input type="text" id="wa-apikey" value="${cfg.waApiKey||''}" placeholder="WhatsApp API key"></div>
-        <div class="fg"><label>WhatsApp Phone Number ID</label><input type="text" id="wa-phone" value="${cfg.waPhoneId||''}" placeholder="Phone number ID from Meta"></div>
-        <button class="btn btn-primary" onclick="saveSmsConfig()">Save Alert Settings</button>
+        <div class="fg"><label>SMS API Key</label><input type="text" id="sms-apikey" value="${escHtml(cfg.smsApiKey||'')}" placeholder="Your SMS API key"></div>
+        <div class="fg"><label>SMS Sender ID</label><input type="text" id="sms-from" value="${escHtml(cfg.smsFrom||'')}" placeholder="e.g. SCHOOL or +233XXXXXXXXX"></div>
+        <div class="fg"><label style="display:flex;align-items:center;gap:8px">WhatsApp Business API Key <span class="alert-chip alert-chip-wa">WA</span></label><input type="text" id="wa-apikey" value="${escHtml(cfg.waApiKey||'')}" placeholder="WhatsApp API key"></div>
+        <div class="fg"><label>WhatsApp Phone Number ID</label><input type="text" id="wa-phone" value="${escHtml(cfg.waPhoneId||'')}" placeholder="Phone number ID from Meta"></div>
+        <button class="btn btn-primary" onclick="saveSmsConfig()">💾 Save Alert Settings</button>
       </div></div>
 
       <div class="card"><div class="card-header"><h3>🌙 Appearance</h3></div><div class="card-body" style="display:flex;flex-direction:column;gap:12px">
@@ -3480,8 +3504,8 @@ async function pgSettings(){
             <option value="en" ${currentLang==='en'?'selected':''}>🌐 English</option>
             <option value="fr" ${currentLang==='fr'?'selected':''}>🇫🇷 Français</option>
             <option value="tw" ${currentLang==='tw'?'selected':''}>🇬🇭 Twi</option>
-              <option value="ga" ${currentLang==='ga'?'selected':''}>🇬🇭 Ga</option>
-              <option value="ee" ${currentLang==='ee'?'selected':''}>🇬🇭 Ewe</option>
+            <option value="ga" ${currentLang==='ga'?'selected':''}>🇬🇭 Ga</option>
+            <option value="ee" ${currentLang==='ee'?'selected':''}>🇬🇭 Ewe</option>
             <option value="ha" ${currentLang==='ha'?'selected':''}>🌍 Hausa</option>
           </select>
         </div>
@@ -3496,8 +3520,8 @@ async function pgSettings(){
             <div style="font-size:11px;color:var(--gray-400)">Profile photo</div>
           </div>
         </div>
-        <div class="fg"><label>Display Name</label><input type="text" id="acc-name" value="${currentUser.name}"></div>
-        <div class="fg"><label>Email (for password reset &amp; 2FA)</label><input type="email" id="acc-email" value="${currentUser.email||''}"></div>
+        <div class="fg"><label>Display Name</label><input type="text" id="acc-name" value="${escHtml(currentUser.name)}"></div>
+        <div class="fg"><label>Email (for password reset &amp; 2FA)</label><input type="email" id="acc-email" value="${escHtml(currentUser.email||'')}"></div>
         <button class="btn btn-primary" onclick="saveAccountInfo()">Update Account</button>
       </div></div>
 
@@ -3522,16 +3546,21 @@ async function updateMyPhoto(input){
 }
 
 async function saveSchoolCfg(){
-  await saveCfg('schoolName',document.getElementById('cfg-name').value.trim()||'My School');
-  await saveCfg('schoolMotto',document.getElementById('cfg-motto').value.trim());
-  await saveCfg('schoolAddress',document.getElementById('cfg-addr').value.trim());
-  await saveCfg('schoolPhone',document.getElementById('cfg-phone').value.trim());
-  // cfg[key] is updated by saveCfg; reflect in topbar and auth screen immediately
+  const name=document.getElementById('cfg-name').value.trim();
+  const motto=document.getElementById('cfg-motto').value.trim();
+  const addr=document.getElementById('cfg-addr').value.trim();
+  const phone=document.getElementById('cfg-phone').value.trim();
+  await saveCfg('schoolName',name);
+  await saveCfg('schoolMotto',motto);
+  await saveCfg('schoolAddress',addr);
+  await saveCfg('schoolPhone',phone);
+  // Reflect in topbar and auth screen immediately
+  const displayName=name||'School Records';
   const nameEl=document.getElementById('topbar-school-name');
-  if(nameEl)nameEl.innerHTML=cfg.schoolName.replace(' ','<br>');
+  if(nameEl)nameEl.innerHTML=displayName.replace(' ','<br>');
   const authTitle=document.getElementById('auth-school-title');
-  if(authTitle)authTitle.textContent=cfg.schoolName;
-  await audit('SETTINGS_SCHOOL',`School info updated: ${cfg.schoolName}`);
+  if(authTitle)authTitle.textContent=name||'School Management System';
+  await audit('SETTINGS_SCHOOL',`School info updated: ${name||'(unnamed)'}`);
   toast('School info saved','success');
 }
 async function uploadSchoolLogo(input){
@@ -3548,21 +3577,30 @@ async function removeSchoolLogo(){
   toast('Logo removed');pgSettings();
 }
 async function saveAcademicCfg(){
-  const csmax=parseInt(document.getElementById('cfg-csmax').value)||30;
-  const esmax=parseInt(document.getElementById('cfg-esmax').value)||70;
-  if(csmax+esmax!==100){toast('Class Score Max + Exam Score Max must sum to 100.','error');return;}
-  await saveCfg('academicYear',document.getElementById('cfg-year').value.trim());
-  await saveCfg('currentTerm',document.getElementById('cfg-term').value);
-  await saveCfg('gradingSystem',document.getElementById('cfg-grading').value);
-  await saveCfg('classScoreMax',csmax);
-  await saveCfg('examScoreMax',esmax);
-  await saveCfg('passThreshold',parseInt(document.getElementById('cfg-pass').value)||50);
-  await saveCfg('bestXSubjects',parseInt(document.getElementById('cfg-bestx').value)||0);
-  // Re-parse numerics after save so in-memory cfg reflects correct types
-  cfg.classScoreMax  = csmax;
-  cfg.examScoreMax   = esmax;
-  cfg.passThreshold  = parseInt(cfg.passThreshold)||50;
-  cfg.bestXSubjects  = parseInt(cfg.bestXSubjects)||0;
+  const csmaxEl=document.getElementById('cfg-csmax');
+  const esmaxEl=document.getElementById('cfg-esmax');
+  const csmax=csmaxEl.value!==''?parseInt(csmaxEl.value):null;
+  const esmax=esmaxEl.value!==''?parseInt(esmaxEl.value):null;
+  if(csmax!==null&&esmax!==null&&csmax+esmax!==100){toast('Class Score Max + Exam Score Max must sum to 100.','error');return;}
+  const year=document.getElementById('cfg-year').value.trim();
+  const term=document.getElementById('cfg-term').value;
+  if(!year){toast('Academic Year is required','error');return;}
+  if(!term){toast('Please select a Current Term','error');return;}
+  await saveCfg('academicYear',year);
+  await saveCfg('currentTerm',term);
+  const grading=document.getElementById('cfg-grading').value;
+  if(grading) await saveCfg('gradingSystem',grading);
+  if(csmax!==null) await saveCfg('classScoreMax',csmax);
+  if(esmax!==null) await saveCfg('examScoreMax',esmax);
+  const passEl=document.getElementById('cfg-pass').value;
+  if(passEl!=='') await saveCfg('passThreshold',parseInt(passEl)||0);
+  const bestxEl=document.getElementById('cfg-bestx').value;
+  if(bestxEl!=='') await saveCfg('bestXSubjects',parseInt(bestxEl)||0);
+  // Re-parse numerics after save
+  if(csmax!==null) cfg.classScoreMax=csmax;
+  if(esmax!==null) cfg.examScoreMax=esmax;
+  cfg.passThreshold=passEl!==''?(parseInt(passEl)||0):cfg.passThreshold;
+  cfg.bestXSubjects=bestxEl!==''?(parseInt(bestxEl)||0):cfg.bestXSubjects;
   await audit('SETTINGS_ACADEMIC',`Academic settings updated — ${cfg.currentTerm} ${cfg.academicYear}`);
   toast('Academic settings saved','success');
 }
@@ -3576,7 +3614,7 @@ async function saveEmailJSCfg(){
 async function testEmailJS(){
   if(!emailjsCfg.serviceId)return toast('Configure EmailJS first','error');
   if(!currentUser.email)return toast('Add your email in My Account first','error');
-  try{await emailjs.send(emailjsCfg.serviceId,emailjsCfg.templateId,{to_email:currentUser.email,to_name:currentUser.name,reset_code:'TEST-123',school_name:cfg.schoolName});toast('Test email sent!','success');}
+  try{await emailjs.send(emailjsCfg.serviceId,emailjsCfg.templateId,{to_email:currentUser.email,to_name:currentUser.name,reset_code:'TEST-123',school_name:cfgSchoolName()});toast('Test email sent!','success');}
   catch(e){toast('EmailJS error — check config','error');}
 }
 async function saveAccountInfo(){
@@ -3638,7 +3676,7 @@ async function pgMyScores(){
   const myScores=scores.filter(sc=>sc.studentId===student.id);
   const byTerm={};myScores.forEach(sc=>{const k=`${sc.term}|${sc.academicYear}`;if(!byTerm[k])byTerm[k]={term:sc.term,year:sc.academicYear,scores:[]};byTerm[k].scores.push(sc);});
   mc.innerHTML=`<div class="page-header"><div><h2>Scores Overview</h2><p>${student.name}</p></div></div>
-  ${Object.values(byTerm).length===0?`<div class="empty-state"><div class="empty-icon">📊</div><h4>No scores yet</h4></div>`:Object.values(byTerm).map(termData=>{const avg=termData.scores.filter(sc=>sc.total!==null).reduce((s,sc,_,a)=>s+sc.total/a.length,0);return`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>${termData.term} · ${termData.year}</h3><span class="badge badge-navy">Avg: ${Math.round(avg)||'—'}</span></div><div class="table-wrap"><table><thead><tr><th>Subject</th><th style="text-align:center">Class</th><th style="text-align:center">Exam</th><th style="text-align:center">Total</th><th style="text-align:center">Grade</th></tr></thead><tbody>${termData.scores.map(sc=>{const subj=subjects.find(s=>s.id===sc.subjectId);const isFail=sc.total!==null&&sc.total<cfg.passThreshold;return`<tr${isFail?' style="background:rgba(176,32,32,.05)"':''}><td>${subj?subj.name:'Unknown'}</td><td style="text-align:center">${sc.classScore!==null?sc.classScore:'—'}</td><td style="text-align:center">${sc.examScore!==null?sc.examScore:'—'}</td><td style="text-align:center"><strong>${sc.total!==null?sc.total:'—'}</strong></td><td style="text-align:center" class="${isFail?'fail-score':'g-'+(sc.grade||'')}"><strong>${sc.grade||'—'}</strong></td></tr>`;}).join('')}</tbody></table></div></div>`;}).join('')}`;
+  ${Object.values(byTerm).length===0?`<div class="empty-state"><div class="empty-icon">📊</div><h4>No scores yet</h4></div>`:Object.values(byTerm).map(termData=>{const avg=termData.scores.filter(sc=>sc.total!==null).reduce((s,sc,_,a)=>s+sc.total/a.length,0);return`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>${termData.term} · ${termData.year}</h3><span class="badge badge-navy">Avg: ${Math.round(avg)||'—'}</span></div><div class="table-wrap"><table><thead><tr><th>Subject</th><th style="text-align:center">Class</th><th style="text-align:center">Exam</th><th style="text-align:center">Total</th><th style="text-align:center">Grade</th></tr></thead><tbody>${termData.scores.map(sc=>{const subj=subjects.find(s=>s.id===sc.subjectId);const isFail=sc.total!==null&&sc.total<cfgPassThreshold();return`<tr${isFail?' style="background:rgba(176,32,32,.05)"':''}><td>${subj?subj.name:'Unknown'}</td><td style="text-align:center">${sc.classScore!==null?sc.classScore:'—'}</td><td style="text-align:center">${sc.examScore!==null?sc.examScore:'—'}</td><td style="text-align:center"><strong>${sc.total!==null?sc.total:'—'}</strong></td><td style="text-align:center" class="${isFail?'fail-score':'g-'+(sc.grade||'')}"><strong>${sc.grade||'—'}</strong></td></tr>`;}).join('')}</tbody></table></div></div>`;}).join('')}`;
 }
 
 async function findMyStudent(){
@@ -4213,7 +4251,7 @@ async function loadProgressChart(studentId){
                 <td><strong>${s.name}</strong></td>
                 ${vals.map(v=>{
                   if(v===null)return`<td style="text-align:center;color:var(--gray-200)">—</td>`;
-                  const isFail=v<cfg.passThreshold;
+                  const isFail=v<cfgPassThreshold();
                   return`<td style="text-align:center;${isFail?'background:rgba(176,32,32,.07)':''}">
                     <span class="${isFail?'fail-score':'g-'+gradeGES(v).g}" style="font-weight:700">${v}</span>
                   </td>`;
@@ -4282,7 +4320,7 @@ async function renderFailureReport(){
     subjStats[sc.subjectId].total++;
     subjStats[sc.subjectId].scores.push(sc.total);
     const subj=subjects.find(s=>s.id===sc.subjectId);
-    const pass=subj?subj.passThreshold||cfg.passThreshold||50:cfg.passThreshold||50;
+    const pass=subj?subj.passThreshold||cfgPassThreshold():cfgPassThreshold();
     if(sc.total<pass)subjStats[sc.subjectId].failed++;
   });
 
@@ -4293,7 +4331,7 @@ async function renderFailureReport(){
     if(!classStats[st.classId])classStats[st.classId]={total:0,failed:0};
     classStats[st.classId].total++;
     const subj=subjects.find(s=>s.id===sc.subjectId);
-    const pass=subj?subj.passThreshold||cfg.passThreshold||50:cfg.passThreshold||50;
+    const pass=subj?subj.passThreshold||cfgPassThreshold():cfgPassThreshold();
     if(sc.total<pass)classStats[st.classId].failed++;
   });
 
@@ -4521,9 +4559,11 @@ async function exportScoresToExcel(){
 }
 
 async function saveSecurityCfg(){
-  cfg.sessionTimeout=parseInt(document.getElementById('cfg-timeout').value)||0;
+  const timeoutVal=document.getElementById('cfg-timeout').value;
+  const attVal=document.getElementById('cfg-att-alert').value;
+  cfg.sessionTimeout=timeoutVal!==''?parseInt(timeoutVal)||0:(cfg.sessionTimeout||0);
   cfg.twoFactorEnabled=document.getElementById('cfg-2fa').checked;
-  cfg.attendanceAlert=parseInt(document.getElementById('cfg-att-alert').value)||75;
+  cfg.attendanceAlert=attVal!==''?parseInt(attVal)||75:(cfg.attendanceAlert||75);
   await saveCfg('sessionTimeout',cfg.sessionTimeout);
   await saveCfg('twoFactorEnabled',cfg.twoFactorEnabled);
   await saveCfg('attendanceAlert',cfg.attendanceAlert);
@@ -4542,29 +4582,18 @@ async function init(){
       <div style="background:#fff;border-radius:16px;padding:40px 48px;max-width:480px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.4)">
         <div style="font-size:48px;margin-bottom:16px">⚙️</div>
         <h2 style="color:#0F1F3D;font-size:20px;margin-bottom:12px">Supabase Not Configured</h2>
-        <p style="color:#5A5A52;font-size:14px;line-height:1.7">Set <code style="background:#F5F5F2;padding:2px 6px;border-radius:4px">window.SUPABASE_URL</code> and <code style="background:#F5F5F2;padding:2px 6px;border-radius:4px">window.SUPABASE_ANON_KEY</code> at the top of <strong>index.html</strong> before deploying.<br><br>Never commit real credentials to source control — use your hosting platform's environment variable injection.</p>
+        <p style="color:#5A5A52;font-size:14px;line-height:1.7">Set <code style="background:#F5F5F2;padding:2px 6px;border-radius:4px">window.SUPABASE_URL</code> and <code style="background:#SUPABASE_ANON_KEY;padding:2px 6px;border-radius:4px">window.SUPABASE_ANON_KEY</code> in <strong>config.js</strong> before deploying.</p>
       </div>
     </div>`;
     return;
   }
   await initDB();
   await seedAdmin();
-  // Robust config load — app works with defaults even if settings fetch fails (Correction 2)
   try {
     await loadConfig();
   } catch(err) {
-    console.error('Settings load error (using defaults):', err);
-    // Ensure defaults are still applied even on failure
-    cfg.schoolName    = cfg.schoolName    || 'My School';
-    cfg.schoolMotto   = cfg.schoolMotto   || 'Excellence in Education';
-    cfg.currentTerm   = cfg.currentTerm   || 'Term 1';
-    cfg.academicYear  = cfg.academicYear  || '2024/2025';
-    cfg.gradingSystem = cfg.gradingSystem || 'ges';
-    cfg.classScoreMax = cfg.classScoreMax || 30;
-    cfg.examScoreMax  = cfg.examScoreMax  || 70;
-    cfg.passThreshold = cfg.passThreshold || 50;
-    cfg.sessionTimeout = cfg.sessionTimeout || 30;
-    cfg.attendanceAlert = cfg.attendanceAlert || 75;
+    console.error('Settings load error:', err);
+    // On failure, keep cfg as empty — settings page will prompt admin to configure
     window.AppConfig.settings = {...cfg};
   }
   initTheme();
@@ -4612,7 +4641,7 @@ async function pgDataManagement(){
         </div>
         <div class="fg">
           <label>Academic Year</label>
-          <input type="text" id="dm-year" value="${cfg.academicYear||'2024/2025'}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:6px;font-family:Outfit,sans-serif">
+          <input type="text" id="dm-year" value="${cfg.academicYear||''}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:6px;font-family:Outfit,sans-serif">
         </div>
         <button class="btn" style="background:#fff3cd;color:#856404;border:1px solid #ffc107" onclick="clearByTerm('scores')">Clear Scores for Term</button>
         <button class="btn" style="background:#fff3cd;color:#856404;border:1px solid #ffc107" onclick="clearByTerm('attendance')">Clear Attendance for Term</button>
@@ -4876,7 +4905,7 @@ async function recordStudentPayment(studentId){
 async function sendFeeAlert(studentId,amt){
   const student=await dbGet('students',studentId).catch(()=>null);
   if(!student||!student.parentPhone)return;
-  const msg=`${cfg.schoolName}: GH\u20B5${amt.toLocaleString()} fee payment recorded for ${student.name}. Balance: GH\u20B5${Math.max(0,(student._feeBalance||0)).toLocaleString()}. Thank you.`;
+  const msg=`${cfgSchoolName()}: GH\u20B5${amt.toLocaleString()} fee payment recorded for ${student.name}. Balance: GH\u20B5${Math.max(0,(student._feeBalance||0)).toLocaleString()}. Thank you.`;
   await sendBulkSmsAlert(msg,student.parentPhone);
 }
 
