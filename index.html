@@ -9,9 +9,14 @@
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="./config.js"></script>
-<!-- ══ SUPABASE CONFIG — credentials are loaded from config.js (loaded above) ══ -->
-<!-- window.SUPABASE_URL and window.SUPABASE_ANON_KEY are set in config.js.      -->
-<!-- Never hard-code credentials here; use config.js or env-variable injection.  -->
+<!-- ══ SUPABASE CONFIG — set your own values here; never commit real keys to source control ══ -->
+<script>
+  // SECURITY: Do NOT hard-code real credentials here.
+  // Set these via your hosting platform's environment variable injection,
+  // or replace the empty strings below only in a local .env-injected build.
+  window.SUPABASE_URL      = window.SUPABASE_URL || '';   // e.g. https://xxxx.supabase.co
+  window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';   // found in Supabase Settings API
+</script>
 <style>
 :root{
   --navy:#0F1F3D;--navy-80:#1A3060;--navy-60:#2A4A80;
@@ -619,7 +624,7 @@ body.dark-mode #toast{background:#1E2E50;}
     <div class="topbar-center"><span id="topbar-page-title">Dashboard</span></div>
     <div class="topbar-right">
       <button class="dark-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode" id="dark-toggle-btn">🌙</button>
-      <select class="lang-select lang-selector" onchange="setLanguage(this.value)" id="lang-selector">
+      <select class="lang-select" onchange="setLanguage(this.value)" id="lang-selector" class="lang-selector">
         <option value="en">🌐 EN</option>
         <option value="fr">🇫🇷 FR</option>
         <option value="tw">🇬🇭 TW</option>
@@ -719,14 +724,9 @@ const FIELD_MAP = {
   gradingSystem:'grading_system', gradingOverride:'grading_override', useCustom:'use_custom',
   classTotal:'class_total', workItemId:'work_item_id', maxScore:'max_score',
   classTeacherRemark:'class_teacher_remark', headTeacherRemark:'head_teacher_remark',
-  // teacherRemark and headRemark are write-only aliases — only used when saving (toSnake);
-  // canonical camelCase keys (classTeacherRemark / headTeacherRemark) are used for reads.
-  teacherRemark:'class_teacher_remark', headRemark:'head_teacher_remark',
-  daysPresent:'days_present', daysAbsent:'days_absent', daysOpen:'days_open',
-  nextTermBegins:'next_term_begins',
-  // resumeDate is a write-only alias for next_term_begins (legacy field name in some forms)
-  resumeDate:'next_term_begins',
-  recordedBy:'recorded_by',
+  teacherRemark:'class_teacher_remark', headRemark:'head_teacher_remark', resumeDate:'next_term_begins',
+  daysPresent:'days_present', daysAbsent:'days_absent', daysOpen:'days_open', nextTermBegins:'next_term_begins',
+  recordedBy:'recorded_by', enteredBy:'entered_by',
   targetRole:'target_role', userId:'user_id', userName:'user_name',
   authorId:'author_id', readBy:'read_by', priority:'priority',
   studentName:'student_name', graduationYear:'graduation_year',
@@ -779,13 +779,8 @@ function toSnake(obj){
 
 function toCamel(obj){
   if(!obj||typeof obj!=='object'||Array.isArray(obj))return obj;
-  // Build reverse map — for DB columns that have multiple JS aliases (e.g. teacherRemark /
-  // classTeacherRemark both map to class_teacher_remark), we want the *first* (canonical)
-  // key encountered to win when converting DB rows back to JS objects.
-  const rev={};
-  for(const[k,v]of Object.entries(FIELD_MAP)){
-    if(!(v in rev)) rev[v]=k; // first definition wins → canonical camelCase name
-  }
+  // Build reverse map
+  const rev={};for(const[k,v]of Object.entries(FIELD_MAP))rev[v]=k;
   const out={};
   for(const[k,v]of Object.entries(obj)){
     const jsKey=rev[k]||k;
