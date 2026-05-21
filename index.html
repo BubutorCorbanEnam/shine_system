@@ -905,13 +905,16 @@ async function loadConfig(){
   // Load all settings from DB — no hardcoded defaults; values stay exactly as stored
   all.forEach(s=>cfg[s.key]=s.value);
 
-  // ── Numeric settings — parse from string (Supabase stores as text); 0 stays 0 ──
-  cfg.classScoreMax   = cfg.classScoreMax   !== undefined ? (parseInt(cfg.classScoreMax)   || 0) : undefined;
-  cfg.examScoreMax    = cfg.examScoreMax    !== undefined ? (parseInt(cfg.examScoreMax)    || 0) : undefined;
-  cfg.bestXSubjects   = cfg.bestXSubjects   !== undefined ? (parseInt(cfg.bestXSubjects)   || 0) : 0;
-  cfg.passThreshold   = cfg.passThreshold   !== undefined ? (parseInt(cfg.passThreshold)   || 0) : undefined;
-  cfg.sessionTimeout  = cfg.sessionTimeout  !== undefined ? (parseInt(cfg.sessionTimeout)  || 0) : 30;
-  cfg.attendanceAlert = cfg.attendanceAlert !== undefined ? (parseInt(cfg.attendanceAlert) || 0) : 75;
+  // ── Numeric settings — parse from string (Supabase stores as text) ──
+  // Use a safe parser: returns the parsed int if valid, or undefined to allow
+  // cfgClassScoreMax()/cfgExamScoreMax()/cfgPassThreshold() to apply their defaults.
+  function safeInt(v){ const n=parseInt(v); return isNaN(n)?undefined:n; }
+  cfg.classScoreMax   = cfg.classScoreMax   !== undefined ? safeInt(cfg.classScoreMax)   : undefined;
+  cfg.examScoreMax    = cfg.examScoreMax    !== undefined ? safeInt(cfg.examScoreMax)    : undefined;
+  cfg.bestXSubjects   = cfg.bestXSubjects   !== undefined ? (safeInt(cfg.bestXSubjects)??0) : 0;
+  cfg.passThreshold   = cfg.passThreshold   !== undefined ? safeInt(cfg.passThreshold)   : undefined;
+  cfg.sessionTimeout  = cfg.sessionTimeout  !== undefined ? (safeInt(cfg.sessionTimeout)??30) : 30;
+  cfg.attendanceAlert = cfg.attendanceAlert !== undefined ? (safeInt(cfg.attendanceAlert)??75) : 75;
 
   // ── Boolean settings ────────────────────────────────────────────
   cfg.twoFactorEnabled = (cfg.twoFactorEnabled === 'true' || cfg.twoFactorEnabled === true);
@@ -1474,10 +1477,20 @@ async function applyNewPassword(){
 //  APP LAUNCH
 // ═══════════════════════════════════════════
 async function launchApp(){
-  // Always reload config at login time so cfg reflects the live DB state,
-  // regardless of whether the startup loadConfig() succeeded or was blocked
-  // by a slow connection. This is what makes all post-login checks reliable.
-  try{ await loadConfig(); }catch(e){ console.warn('Config reload failed:', e); }
+  // Always reload config FRESH from DB at login time.
+  // This ensures every user (teacher, parent) always sees the admin's
+  // latest settings (term, year, score weights, pass threshold) immediately
+  // on login — never stale localStorage-cached values.
+  try{
+    await loadConfig();
+  }catch(e){
+    console.warn('Config reload failed — falling back to cache:', e);
+    try{
+      const cached=localStorage.getItem('sms_cfg_cache');
+      if(cached) Object.assign(cfg, JSON.parse(cached));
+    }catch(ce){}
+    setTimeout(()=>toast('\u26a0\ufe0f Settings could not load from server. Values may be outdated.','error'),1500);
+  }
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app').classList.add('visible');
   const avEl=document.getElementById('topbar-avatar');
@@ -1717,16 +1730,16 @@ if(role==='admin'||role==='teacher'){
       <div class="stat-card navy"><div class="stat-icon">👨‍🎓</div><div class="stat-label">${role==='teacher'?'My ':''}Students</div><div class="stat-value">${myStudents.length}</div><div class="stat-sub">Active</div></div>
       <div class="stat-card gold"><div class="stat-icon">🏷️</div><div class="stat-label">Classes</div><div class="stat-value">${classes.length}</div><div class="stat-sub">Active</div></div>
       <div class="stat-card green"><div class="stat-icon">📚</div><div class="stat-label">Subjects</div><div class="stat-value">${subjects.length}</div><div class="stat-sub">Offered</div></div>
-      ${role==='admin'?`<div class="stat-card teal"><div class="stat-icon">👥</div><div class="stat-label">Staff</div><div class="stat-value">${users.filter(u=>u.role==='teacher').length}</div><div class="stat-sub">${pending} pending</div></div>`:`<div class="stat-card teal"><div class="stat-icon">📝</div><div class="stat-label">Scores Entered</div><div class="stat-value">${scores.filter(sc=>sc.term===cfg.currentTerm&&sc.academicYear===cfg.academicYear).length}</div><div class="stat-sub">This term</div></div>`}
+      ${role==='admin'?`<div class="stat-card teal"><div class="stat-icon">👥</div><div class="stat-label">Staff</div><div class="stat-value">${users.filter(u=>u.role==='teacher').length}</div><div class="stat-sub">${pending} pending</div></div>`:`<div class="stat-card teal"><div class="stat-icon">📝</div><div class="stat-label">Scores Entered</div><div class="stat-value">${scores.filter(sc=>sc.term===cfgTerm()&&sc.academicYear===cfgYear()).length}</div><div class="stat-sub">This term</div></div>`}
     </div>`;
 
-    const termScores=scores.filter(sc=>sc.term===cfg.currentTerm&&sc.academicYear===cfg.academicYear&&sc.total!==null);
+    const termScores=scores.filter(sc=>sc.term===cfgTerm()&&sc.academicYear===cfgYear()&&sc.total!==null);
     const classAvgs={};
     termScores.forEach(sc=>{const st=students.find(s=>s.id===sc.studentId);if(!st)return;if(!classAvgs[st.classId])classAvgs[st.classId]={sum:0,count:0};classAvgs[st.classId].sum+=sc.total;classAvgs[st.classId].count++;});
     const classColors=['#0F1F3D','#1A6B3C','#0F6B6B','#8B5E00','#B02020'];
 
     html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-      <div class="card"><div class="card-header"><h3>Class Performance — ${cfg.currentTerm}</h3></div><div class="chart-bar-wrap" style="padding-top:16px">`;
+      <div class="card"><div class="card-header"><h3>Class Performance — ${cfgTerm()}</h3></div><div class="chart-bar-wrap" style="padding-top:16px">`;
     classes.slice(0,5).forEach((cls,i)=>{const data=classAvgs[cls.id];const avg=data?Math.round(data.sum/data.count):0;html+=`<div class="chart-row"><div class="chart-label">${cls.name}</div><div class="chart-bar-bg"><div class="chart-bar" style="width:${avg}%;background:${classColors[i%classColors.length]}">${avg>10?avg+'%':''}</div></div><div class="chart-val">${avg||'—'}</div></div>`;});
     if(classes.length===0)html+=`<p style="color:var(--gray-400);font-size:13px;text-align:center;padding:20px">No classes yet</p>`;
     html+=`</div></div>
@@ -2413,8 +2426,8 @@ async function pgScores(){
     myClasses=hasSchoolWide?classes:classes.filter(c=>myClassIds.has(c.id)||myClassIds.has(parseInt(c.id)));
   }
 
-  scTerm=scTerm||cfg.currentTerm||'';
-  scYear=scYear||cfg.academicYear||'';
+  scTerm=scTerm||cfgTerm()||'';
+  scYear=scYear||cfgYear()||'';
 
   mc.innerHTML=`
     <div class="page-header">
@@ -2853,7 +2866,7 @@ let perfTerm='',perfYear='',perfClassId='';
 
 async function pgPerformance(){
   const mc=document.getElementById('main-content');
-  perfTerm=perfTerm||cfg.currentTerm;perfYear=perfYear||cfg.academicYear;
+  perfTerm=perfTerm||cfgTerm();perfYear=perfYear||cfgYear();
   const classes=await dbGetAll('classes');
   mc.innerHTML=`
     <div class="page-header"><div><h2>Class Performance</h2><p>Analyse results and trends</p></div></div>
@@ -2937,7 +2950,7 @@ async function pgAttendance(){
   const classes=await dbGetAll('classes');
   let myClasses=classes;
   if(currentUser.role==='teacher')myClasses=classes.filter(c=>c.teacherId===currentUser.id);
-  attTerm=attTerm||cfg.currentTerm;attYear=attYear||cfg.academicYear;
+  attTerm=attTerm||cfgTerm();attYear=attYear||cfgYear();
   mc.innerHTML=`
     <div class="page-header"><div><h2>Attendance</h2><p>Track student attendance per term</p></div><button class="btn btn-primary" onclick="saveAttendance()">💾 Save</button></div>
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
@@ -2998,7 +3011,7 @@ async function pgReports(){
   const mc=document.getElementById('main-content');
   const classes=await dbGetAll('classes');
   let myClasses=classes;if(currentUser.role==='teacher')myClasses=classes.filter(c=>c.teacherId===currentUser.id);
-  rptTerm=rptTerm||cfg.currentTerm;rptYear=rptYear||cfg.academicYear;
+  rptTerm=rptTerm||cfgTerm();rptYear=rptYear||cfgYear();
   mc.innerHTML=`
     <div class="page-header"><div><h2>Report Cards</h2><p>Preview, add remarks, and print</p></div></div>
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
@@ -3155,7 +3168,7 @@ async function executeClassPromotion(studentId){
     if(!student||!student.classId)return;
     // Check academic performance and warn if student has failing scores
     const allScores=await dbGetAll('scores');
-    const termScores=allScores.filter(s=>s.studentId===studentId&&s.term===cfg.currentTerm&&s.academicYear===cfg.academicYear);
+    const termScores=allScores.filter(s=>s.studentId===studentId&&s.term===cfgTerm()&&s.academicYear===cfgYear());
     const failCount=termScores.filter(s=>(s.total||0)<(cfgPassThreshold())).length;
     if(failCount>0&&!confirm(`⚠️ ${student.name} has ${failCount} failing subject(s) this term. Proceed with promotion anyway?`))return;
     const classes=await dbGetAll('classes');
@@ -3474,7 +3487,7 @@ async function pgSettings(){
       <div class="card"><div class="card-header"><h3>🔒 Security Settings</h3></div><div class="card-body" style="display:flex;flex-direction:column;gap:12px">
         <div class="fg">
           <label>Session Timeout (minutes, 0 = disabled)</label>
-          <input type="number" id="cfg-timeout" value="${cfg.sessionTimeout!==undefined?cfg.sessionTimeout:''}" min="0" max="480" placeholder="e.g. 30">
+          <input type="number" id="cfg-timeout" value="${cfg.sessionTimeout!==undefined?cfg.sessionTimeout:''}" min="0" max="480" placeholder="e.g. 40">
         </div>
         <div class="fg">
           <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
@@ -3636,7 +3649,7 @@ async function saveAcademicCfg(){
   // Mark setup complete — idempotent upsert, safe to write on every save
   cfg.setupComplete = 'true';
   await saveCfg('setupComplete','true');
-  await audit('SETTINGS_ACADEMIC',`Academic settings updated — ${cfg.currentTerm} ${cfg.academicYear}`);
+  await audit('SETTINGS_ACADEMIC',`Academic settings updated — ${cfgTerm()} ${cfgYear()}`);
   toast('Academic settings saved','success');
 }
 async function saveEmailJSCfg(){
@@ -3689,9 +3702,9 @@ async function pgMyReport(){
   const mc=document.getElementById('main-content');
   const student=await findMyStudent();
   if(!student){mc.innerHTML=`<div class="empty-state"><div class="empty-icon">🔍</div><h4>Student not found</h4><p>Linked to ID: <strong>${currentUser.studentId||'(none)'}</strong>. Contact admin.</p></div>`;return;}
-  const data=await buildReport(student.id,cfg.currentTerm,cfg.academicYear);
+  const data=await buildReport(student.id,cfgTerm(),cfgYear());
   mc.innerHTML=`
-    <div class="page-header"><div><h2>My Report Card</h2><p>${cfg.currentTerm} · ${cfg.academicYear}</p></div><button class="btn btn-primary" onclick="printMyReport(${student.id})">🖨️ Print</button></div>
+    <div class="page-header"><div><h2>My Report Card</h2><p>${cfgTerm()} · ${cfgYear()}</p></div><button class="btn btn-primary" onclick="printMyReport(${student.id})">🖨️ Print</button></div>
     <div class="card" style="max-width:700px">
       <div class="card-header"><h3>${student.name}</h3><div style="display:flex;gap:8px"><span class="badge badge-navy">${data.cls?data.cls.name:'—'}</span><span class="badge badge-green">Position: ${data.rank} / ${data.classSize}</span></div></div>
       <div style="padding:16px">
@@ -3721,7 +3734,7 @@ async function findMyStudent(){
   return students.find(s=>s.studentId===currentUser.studentId)||null;
 }
 async function printMyReport(studentId){
-  const data=await buildReport(studentId,cfg.currentTerm,cfg.academicYear);
+  const data=await buildReport(studentId,cfgTerm(),cfgYear());
   document.getElementById('print-area').innerHTML=renderRC(data);window.print();
 }
 
@@ -4613,12 +4626,20 @@ async function saveSecurityCfg(){
 //  INIT
 // ═══════════════════════════════════════════
 async function init(){
-  // Hydrate cfg from localStorage cache immediately — before any async DB call.
-  // This ensures settings are available instantly on refresh without waiting for
-  // the network, and provides a fallback if the DB load fails.
+  // Pre-hydrate cfg from localStorage cache so the login screen has school name/logo
+  // instantly. This is display-only — launchApp() always overwrites with a fresh DB
+  // load after login, so teachers/parents never get stale academic settings.
   try{
     const cached=localStorage.getItem('sms_cfg_cache');
-    if(cached){ Object.assign(cfg, JSON.parse(cached)); }
+    if(cached){
+      const c=JSON.parse(cached);
+      // Only hydrate display fields here — numeric academic settings will be
+      // loaded fresh from DB in launchApp(), preventing stale values for non-admin users.
+      if(c.schoolName) cfg.schoolName=c.schoolName;
+      if(c.schoolLogo) cfg.schoolLogo=c.schoolLogo;
+      if(c.darkMode)   cfg.darkMode=c.darkMode;
+      if(c.language)   cfg.language=c.language;
+    }
   }catch(e){}
 
   // Guard: fail fast and clearly if Supabase credentials have not been configured
@@ -4809,17 +4830,17 @@ async function pgFees(){
     const cls=classes.find(c=>c.id===s.classId);
     const clsName=cls?cls.name:'Unassigned';
     if(!feesByClass[clsName])feesByClass[clsName]=[];
-    const stFee=fees.find(f=>f.studentId===s.id&&f.term===cfg.currentTerm&&f.academicYear===cfg.academicYear)||{amount:0,paid:0,status:'unpaid'};
+    const stFee=fees.find(f=>f.studentId===s.id&&f.term===cfgTerm()&&f.academicYear===cfgYear())||{amount:0,paid:0,status:'unpaid'};
     feesByClass[clsName].push({...s,fee:stFee});
   });
 
-  const totalCollected=fees.filter(f=>f.term===cfg.currentTerm&&f.academicYear===cfg.academicYear).reduce((s,f)=>s+(f.paid||0),0);
-  const totalExpected=fees.filter(f=>f.term===cfg.currentTerm&&f.academicYear===cfg.academicYear).reduce((s,f)=>s+(f.amount||0),0);
+  const totalCollected=fees.filter(f=>f.term===cfgTerm()&&f.academicYear===cfgYear()).reduce((s,f)=>s+(f.paid||0),0);
+  const totalExpected=fees.filter(f=>f.term===cfgTerm()&&f.academicYear===cfgYear()).reduce((s,f)=>s+(f.amount||0),0);
   const outstanding=totalExpected-totalCollected;
 
   mc.innerHTML=`
     <div class="page-header">
-      <div><h2>💰 Fee Management</h2><p>${cfg.currentTerm} · ${cfg.academicYear}</p></div>
+      <div><h2>💰 Fee Management</h2><p>${cfgTerm()} · ${cfgYear()}</p></div>
       <div class="page-header-actions">
         <button class="btn btn-gold" onclick="openFeeSetupModal()">⚙️ Set Fee Amounts</button>
         <button class="btn btn-success" onclick="recordFeePayment()">+ Record Payment</button>
@@ -4844,7 +4865,7 @@ async function pgFees(){
         <thead><tr><th>Student</th><th>Class</th><th>Expected</th><th>Paid</th><th>Balance</th><th>Status</th><th></th></tr></thead>
         <tbody>${students.map(s=>{
           const cls=classes.find(c=>c.id===s.classId);
-          const f=fees.find(ff=>ff.studentId===s.id&&ff.term===cfg.currentTerm&&ff.academicYear===cfg.academicYear)||{amount:0,paid:0};
+          const f=fees.find(ff=>ff.studentId===s.id&&ff.term===cfgTerm()&&ff.academicYear===cfgYear())||{amount:0,paid:0};
           const bal=(f.amount||0)-(f.paid||0);
           const status=bal<=0&&f.amount>0?'paid':f.paid>0?'partial':'unpaid';
           return `<tr data-name="${s.name.toLowerCase()}" data-status="${status}">
@@ -4873,7 +4894,7 @@ function filterFeeTable(){
 async function openFeeSetupModal(){
   const classes=await dbGetAll('classes');
   openModal('⚙️ Set Fee Amounts',`
-    <div class="info-box">Set expected fee amounts per class for ${cfg.currentTerm} · ${cfg.academicYear}</div>
+    <div class="info-box">Set expected fee amounts per class for ${cfgTerm()} · ${cfgYear()}</div>
     <div style="display:flex;flex-direction:column;gap:10px;max-height:400px;overflow-y:auto">
     ${classes.map(c=>`<div class="fg" style="flex-direction:row;align-items:center;justify-content:space-between">
       <label style="flex:1">${c.name}</label>
@@ -4894,9 +4915,9 @@ async function saveFeeAmounts(){
     const amt=parseFloat(inp.value)||0;
     const clsStudents=students.filter(s=>s.classId===cls.id);
     for(const st of clsStudents){
-      const ex=fees.find(f=>f.studentId===st.id&&f.term===cfg.currentTerm&&f.academicYear===cfg.academicYear);
+      const ex=fees.find(f=>f.studentId===st.id&&f.term===cfgTerm()&&f.academicYear===cfgYear());
       if(ex){ex.amount=amt;await dbPut('fees',ex);}
-      else await dbAdd('fees',{studentId:st.id,studentName:st.name,classId:cls.id,term:cfg.currentTerm,academicYear:cfg.academicYear,amount:amt,paid:0,status:'unpaid',updatedAt:new Date().toISOString()});
+      else await dbAdd('fees',{studentId:st.id,studentName:st.name,classId:cls.id,term:cfgTerm(),academicYear:cfgYear(),amount:amt,paid:0,status:'unpaid',updatedAt:new Date().toISOString()});
       updated++;
     }
   }
@@ -4907,7 +4928,7 @@ async function saveFeeAmounts(){
 
 async function openStudentFeeModal(studentId){
   const[student,fees]=await Promise.all([dbGet('students',studentId),dbGetAll('fees').catch(()=>[])]);
-  const fee=fees.find(f=>f.studentId===studentId&&f.term===cfg.currentTerm&&f.academicYear===cfg.academicYear)||{amount:0,paid:0};
+  const fee=fees.find(f=>f.studentId===studentId&&f.term===cfgTerm()&&f.academicYear===cfgYear())||{amount:0,paid:0};
   const bal=(fee.amount||0)-(fee.paid||0);
   openModal(`💳 Record Payment — ${student.name}`,`
     <div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
@@ -4929,7 +4950,7 @@ async function recordStudentPayment(studentId){
   const amt=parseFloat(document.getElementById('fee-pay-amt').value)||0;
   if(amt<=0){toast('Enter a valid amount','error');return;}
   const fees=await dbGetAll('fees').catch(()=>[]);
-  const fee=fees.find(f=>f.studentId===studentId&&f.term===cfg.currentTerm&&f.academicYear===cfg.academicYear);
+  const fee=fees.find(f=>f.studentId===studentId&&f.term===cfgTerm()&&f.academicYear===cfgYear());
   const method=document.getElementById('fee-pay-method').value;
   const notes=document.getElementById('fee-pay-notes').value;
   const date=document.getElementById('fee-pay-date').value;
@@ -4938,7 +4959,7 @@ async function recordStudentPayment(studentId){
     const bal=(fee.amount||0)-fee.paid;fee.status=bal<=0?'paid':fee.paid>0?'partial':'unpaid';
     await dbPut('fees',fee);
   } else {
-    await dbAdd('fees',{studentId,term:cfg.currentTerm,academicYear:cfg.academicYear,amount:0,paid:amt,lastPayment:amt,lastPayDate:date,method,notes,status:'partial',updatedAt:new Date().toISOString()});
+    await dbAdd('fees',{studentId,term:cfgTerm(),academicYear:cfgYear(),amount:0,paid:amt,lastPayment:amt,lastPayDate:date,method,notes,status:'partial',updatedAt:new Date().toISOString()});
   }
   await audit('FEE_PAYMENT',`GH₵${amt} recorded for student ${studentId} via ${method}`);
   toast(`GH₵${amt.toLocaleString()} recorded successfully`,'success');
@@ -5095,11 +5116,11 @@ async function pgTimetable(){
   const timetables=await dbGetAll('timetables').catch(()=>[]);
   const classes=await dbGetAll('classes');
   const subjects=await dbGetAll('subjects');
-  const curTT=timetables.filter(t=>t.term===cfg.currentTerm&&t.academicYear===cfg.academicYear);
+  const curTT=timetables.filter(t=>t.term===cfgTerm()&&t.academicYear===cfgYear());
 
   mc.innerHTML=`
     <div class="page-header">
-      <div><h2>📋 Exam Timetable</h2><p>${cfg.currentTerm} · ${cfg.academicYear}</p></div>
+      <div><h2>📋 Exam Timetable</h2><p>${cfgTerm()} · ${cfgYear()}</p></div>
       ${isAdmin?`<div class="page-header-actions">
         <button class="btn btn-primary" onclick="openTimetableModal()">+ Add Slot</button>
         <button class="btn" onclick="exportCSV('timetables')">📤 Export</button>
@@ -5155,7 +5176,7 @@ async function pgAwards(){
 
   mc.innerHTML=`
     <div class="page-header">
-      <div><h2>🏆 Academic Awards & Honours</h2><p>${cfg.currentTerm} · ${cfg.academicYear}</p></div>
+      <div><h2>🏆 Academic Awards & Honours</h2><p>${cfgTerm()} · ${cfgYear()}</p></div>
       ${isAdmin?`<button class="btn btn-gold" onclick="openAwardModal()">🏅 Give Award</button>`:''}
     </div>
     ${awards.length===0?`<div class="empty-state"><div class="empty-icon">🏆</div><h4>No awards yet</h4><p>${isAdmin?'Give out your first academic award!':'Awards will appear here once given.'}</p></div>`:
@@ -5167,7 +5188,7 @@ async function pgAwards(){
         <div style="font-size:32px;margin-bottom:8px">${a.icon||'🏆'}</div>
         <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:4px">${a.title||'Award'}</div>
         <div style="font-size:13px;color:var(--gold);font-weight:600;margin-bottom:8px">${st?st.name:'Unknown Student'}</div>
-        <div style="font-size:12px;color:var(--gray-400)">${cls?cls.name:'—'} · ${a.term||cfg.currentTerm} ${a.academicYear||cfg.academicYear}</div>
+        <div style="font-size:12px;color:var(--gray-400)">${cls?cls.name:'—'} · ${a.term||cfgTerm()} ${a.academicYear||cfgYear()}</div>
         ${a.description?`<div style="font-size:12px;color:var(--gray-600);margin-top:6px;font-style:italic">${a.description}</div>`:''}
         ${isAdmin?`<button class="btn btn-sm btn-danger" style="margin-top:10px" onclick="deleteAward(${a.id})">Remove</button>`:''}
       </div>`;
@@ -5207,7 +5228,7 @@ async function deleteAward(id){if(!confirm('Remove this award?'))return;await db
 async function pgRankings(){
   const mc=document.getElementById('main-content');
   const[students,classes,subjects,scores]=await Promise.all([dbGetAll('students'),dbGetAll('classes'),dbGetAll('subjects'),dbGetAll('scores')]);
-  const term=cfg.currentTerm,year=cfg.academicYear;
+  const term=cfgTerm(),year=cfgYear();
   
   let classFilter=currentUser.role==='teacher'?null:null;
   
@@ -5278,7 +5299,7 @@ function printRankings(){
   const tbl=document.getElementById('rankings-table');
   if(!tbl){toast('No rankings to print','error');return;}
   const win=window.open('','_blank');
-  win.document.write(`<html><head><title>Student Rankings</title><style>body{font-family:Arial,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#0F1F3D;color:white}tr:nth-child(even){background:#f5f5f5}</style></head><body><h2>Student Rankings — ${cfg.currentTerm} · ${cfg.academicYear}</h2>${tbl.outerHTML}</body></html>`);
+  win.document.write(`<html><head><title>Student Rankings</title><style>body{font-family:Arial,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#0F1F3D;color:white}tr:nth-child(even){background:#f5f5f5}</style></head><body><h2>Student Rankings — ${cfgTerm()} · ${cfgYear()}</h2>${tbl.outerHTML}</body></html>`);
   win.document.close();win.print();
 }
 
@@ -5292,16 +5313,16 @@ async function pgRollover(){
   const mc=document.getElementById('main-content');
   const[students,classes,remarks]=await Promise.all([dbGetAll('students'),dbGetAll('classes'),dbGetAll('remarks')]);
   const totalStudents=students.filter(s=>s.status==='active').length;
-  const withPromo=remarks.filter(r=>r.term===cfg.currentTerm&&r.academicYear===cfg.academicYear&&r.promoted).length;
-  const promoted=remarks.filter(r=>r.term===cfg.currentTerm&&r.academicYear===cfg.academicYear&&r.promoted==='yes').length;
-  const repeating=remarks.filter(r=>r.term===cfg.currentTerm&&r.academicYear===cfg.academicYear&&r.promoted==='no').length;
-  const pending=remarks.filter(r=>r.term===cfg.currentTerm&&r.academicYear===cfg.academicYear&&(r.promoted===''||r.promoted==='recommended_yes'||r.promoted==='recommended_no'||!r.promoted)).length+Math.max(0,totalStudents-remarks.filter(r=>r.term===cfg.currentTerm&&r.academicYear===cfg.academicYear).length);
+  const withPromo=remarks.filter(r=>r.term===cfgTerm()&&r.academicYear===cfgYear()&&r.promoted).length;
+  const promoted=remarks.filter(r=>r.term===cfgTerm()&&r.academicYear===cfgYear()&&r.promoted==='yes').length;
+  const repeating=remarks.filter(r=>r.term===cfgTerm()&&r.academicYear===cfgYear()&&r.promoted==='no').length;
+  const pending=remarks.filter(r=>r.term===cfgTerm()&&r.academicYear===cfgYear()&&(r.promoted===''||r.promoted==='recommended_yes'||r.promoted==='recommended_no'||!r.promoted)).length+Math.max(0,totalStudents-remarks.filter(r=>r.term===cfgTerm()&&r.academicYear===cfgYear()).length);
 
   const nextTerm=cfg.currentTerm==='Term 1'?'Term 2':cfg.currentTerm==='Term 2'?'Term 3':'Term 1';
   const nextYear=cfg.currentTerm==='Term 3'?(() => {const pts=cfg.academicYear.split('/');return (parseInt(pts[0])+1)+'/'+(parseInt(pts[1])+1);})():cfg.academicYear;
 
   mc.innerHTML=`
-    <div class="page-header"><div><h2>🔄 Term Rollover & New Year Setup</h2><p>Current: ${cfg.currentTerm} · ${cfg.academicYear}</p></div></div>
+    <div class="page-header"><div><h2>🔄 Term Rollover & New Year Setup</h2><p>Current: ${cfgTerm()} · ${cfgYear()}</p></div></div>
     
     <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px">
       <div class="stat-card navy"><div class="stat-icon">👨‍🎓</div><div class="stat-label">Active Students</div><div class="stat-value">${totalStudents}</div></div>
@@ -5349,14 +5370,14 @@ async function pgRollover(){
 
 async function rolloverStep1(){
   toast('Step 1: Archiving current term…','info');
-  await audit('ROLLOVER_STEP1',`Archived ${cfg.currentTerm} ${cfg.academicYear}`);
+  await audit('ROLLOVER_STEP1',`Archived ${cfgTerm()} ${cfgYear()}`);
   document.querySelectorAll('.rollover-step')[0].classList.add('done');
   toast('Term archived','success');
 }
 
 async function rolloverStep2(){
   const[students,remarks]=await Promise.all([dbGetAll('students'),dbGetAll('remarks')]);
-  const toPromote=remarks.filter(r=>r.term===cfg.currentTerm&&r.academicYear===cfg.academicYear&&r.promoted==='yes'&&r.promotionVerifiedRole==='admin');
+  const toPromote=remarks.filter(r=>r.term===cfgTerm()&&r.academicYear===cfgYear()&&r.promoted==='yes'&&r.promotionVerifiedRole==='admin');
   let count=0;
   for(const r of toPromote){
     await executeClassPromotion(r.studentId);count++;
@@ -5380,17 +5401,17 @@ async function rolloverStep4(){
   try{
     // Delete term attendance summaries for the term we just rolled INTO (they start fresh)
     const att=await dbGetAll('attendance');
-    const toDelete=att.filter(a=>a.term===cfg.currentTerm&&a.academicYear===cfg.academicYear);
+    const toDelete=att.filter(a=>a.term===cfgTerm()&&a.academicYear===cfgYear());
     for(const a of toDelete) await dbDel('attendance',a.id);
     // Delete daily attendance records for the new term
-    await sbReq('DELETE','daily_attendance',null,'term=eq.'+encodeURIComponent(cfg.currentTerm)+'&academic_year=eq.'+encodeURIComponent(cfg.academicYear));
+    await sbReq('DELETE','daily_attendance',null,'term=eq.'+encodeURIComponent(cfgTerm())+'&academic_year=eq.'+encodeURIComponent(cfgYear()));
     document.querySelectorAll('.rollover-step')[3].classList.add('done');
-    await audit('ROLLOVER_STEP4','Attendance counters reset for '+cfg.currentTerm+' '+cfg.academicYear);
+    await audit('ROLLOVER_STEP4','Attendance counters reset for '+cfgTerm()+' '+cfgYear());
     toast('Attendance counters reset for new term','success');
   }catch(e){
     console.warn('Attendance reset error:',e);
     document.querySelectorAll('.rollover-step')[3].classList.add('done');
-    await audit('ROLLOVER_STEP4','Attendance reset attempted — '+cfg.currentTerm+' '+cfg.academicYear);
+    await audit('ROLLOVER_STEP4','Attendance reset attempted — '+cfgTerm()+' '+cfgYear());
     toast('Attendance reset complete','success');
   }
 }
@@ -5399,9 +5420,9 @@ async function runFullRollover(nextTerm,nextYear){
   // Show a detailed summary before proceeding
   const[students,remarks]=await Promise.all([dbGetAll('students'),dbGetAll('remarks')]);
   const active=students.filter(s=>s.status==='active').length;
-  const toPromote=remarks.filter(r=>r.term===cfg.currentTerm&&r.academicYear===cfg.academicYear&&r.promoted==='yes'&&r.promotionVerifiedRole==='admin').length;
-  const pending=remarks.filter(r=>r.term===cfg.currentTerm&&r.academicYear===cfg.academicYear&&(!r.promoted||r.promoted==='recommended_yes'||r.promoted==='recommended_no'||r.promoted==='')).length;
-  const summary=`FULL ROLLOVER SUMMARY\n\nFrom: ${cfg.currentTerm} · ${cfg.academicYear}\nTo:   ${nextTerm} · ${nextYear}\n\nActive students: ${active}\nStudents to promote: ${toPromote}\nPending promotions (unresolved): ${pending}\n\nThis will:\n1. Archive current term\n2. Promote ${toPromote} students\n3. Switch term to ${nextTerm} · ${nextYear}\n4. Reset attendance counters\n\n${pending>0?`⚠️ WARNING: ${pending} students still have unresolved promotion status.\n`:''}\nContinue?`;
+  const toPromote=remarks.filter(r=>r.term===cfgTerm()&&r.academicYear===cfgYear()&&r.promoted==='yes'&&r.promotionVerifiedRole==='admin').length;
+  const pending=remarks.filter(r=>r.term===cfgTerm()&&r.academicYear===cfgYear()&&(!r.promoted||r.promoted==='recommended_yes'||r.promoted==='recommended_no'||r.promoted==='')).length;
+  const summary=`FULL ROLLOVER SUMMARY\n\nFrom: ${cfgTerm()} · ${cfgYear()}\nTo:   ${nextTerm} · ${nextYear}\n\nActive students: ${active}\nStudents to promote: ${toPromote}\nPending promotions (unresolved): ${pending}\n\nThis will:\n1. Archive current term\n2. Promote ${toPromote} students\n3. Switch term to ${nextTerm} · ${nextYear}\n4. Reset attendance counters\n\n${pending>0?`⚠️ WARNING: ${pending} students still have unresolved promotion status.\n`:''}\nContinue?`;
   if(!confirm(summary))return;
   if(!confirm('Final confirmation: this cannot be undone. Proceed?'))return;
   await rolloverStep1();
