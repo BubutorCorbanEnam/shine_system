@@ -1132,7 +1132,7 @@ function verify2FA(){
   if(_2faState.dbTokenId)dbDel('twoFactorTokens',_2faState.dbTokenId).catch(()=>{});
   _2faState={userId:null,code:null,pendingUser:null,dbTokenId:null,expiresAt:null};
   audit('LOGIN','2FA verified login');
-  launchApp();
+  await launchApp();
 }
 
 function cancel2FA(){
@@ -1365,7 +1365,7 @@ async function doLogin(){
     }
     currentUser=user;
     await audit('LOGIN','Standard login');
-    launchApp();
+    await launchApp();
   }catch(e){errEl.textContent='Login error. Try again.';errEl.style.display='block';}
 }
 
@@ -1463,7 +1463,11 @@ async function applyNewPassword(){
 // ═══════════════════════════════════════════
 //  APP LAUNCH
 // ═══════════════════════════════════════════
-function launchApp(){
+async function launchApp(){
+  // Always reload config at login time so cfg reflects the live DB state,
+  // regardless of whether the startup loadConfig() succeeded or was blocked
+  // by a slow connection. This is what makes all post-login checks reliable.
+  try{ await loadConfig(); }catch(e){ console.warn('Config reload failed:', e); }
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app').classList.add('visible');
   const avEl=document.getElementById('topbar-avatar');
@@ -1483,8 +1487,15 @@ function launchApp(){
     document.querySelectorAll('.lang-selector').forEach(el=>el.value=cfg.language);
   }
   if(cfg.darkMode==='true'&&!darkMode){toggleDarkMode();}
-  // First-run: redirect admin to settings if school name hasn't been configured
-  if(currentUser.role==='admin'&&!cfg.schoolName){
+  // First-run: only redirect to settings when term AND year are genuinely both
+  // absent — not on schoolName alone, which is seeded and may be transiently
+  // empty after a slow DB load. Once the admin saves any settings, setupComplete
+  // is written so this redirect never fires again.
+  const genuineFirstRun = currentUser.role==='admin'
+    && !cfg.currentTerm
+    && !cfg.academicYear
+    && !cfg.setupComplete;
+  if(genuineFirstRun){
     navigate('settings');
   } else {
     navigate('dashboard');
@@ -1676,7 +1687,7 @@ async function pgDashboard(){
   let html=`<div class="page-header"><div><h2>Welcome back, ${currentUser.name.split(' ')[0]} 👋</h2><p>${cfgTerm()} · ${cfgYear()}</p></div></div>`;
 
   // Settings setup banner — shown when admin hasn't configured term/year yet
-  if(role==='admin'&&(!cfg.currentTerm||!cfg.academicYear)){
+  if(role==='admin'&&(!cfg.currentTerm||!cfg.academicYear)&&!cfg.setupComplete){
     html+=`<div class="warn-box" style="cursor:pointer;margin-bottom:16px" onclick="navigate('settings')">⚙️ <strong>Setup required:</strong> Academic Year and Current Term are not yet configured. <span style="color:var(--navy);font-weight:600">Go to Settings →</span></div>`;
   }
 
@@ -3397,8 +3408,8 @@ async function createUser(){
 async function pgSettings(){
   const mc=document.getElementById('main-content');
   const isAdmin=currentUser.role==='admin';
-  // Detect first-run: school name not yet set
-  const isFirstRun = isAdmin && !cfg.schoolName;
+  // First-run: only show welcome banner when term+year are genuinely absent and setup was never completed
+  const isFirstRun = isAdmin && !cfg.currentTerm && !cfg.academicYear && !cfg.setupComplete;
   mc.innerHTML=`
     <div class="page-header"><div><h2>⚙️ Settings</h2><p>All settings are saved to the database and take effect immediately.</p></div></div>
     ${isFirstRun?`<div class="warn-box" style="margin-bottom:20px">🎉 <strong>Welcome! First-time setup detected.</strong> Please fill in your school information and academic settings below, then click Save. All fields are optional — you can update them at any time.</div>`:''}
@@ -3608,6 +3619,8 @@ async function saveAcademicCfg(){
   if(esmax!==null) cfg.examScoreMax=esmax;
   cfg.passThreshold=passEl!==''?(parseInt(passEl)||0):cfg.passThreshold;
   cfg.bestXSubjects=bestxEl!==''?(parseInt(bestxEl)||0):cfg.bestXSubjects;
+  // Mark setup as complete so launchApp never redirects to settings again
+  if(!cfg.setupComplete) await saveCfg('setupComplete','true');
   await audit('SETTINGS_ACADEMIC',`Academic settings updated — ${cfg.currentTerm} ${cfg.academicYear}`);
   toast('Academic settings saved','success');
 }
