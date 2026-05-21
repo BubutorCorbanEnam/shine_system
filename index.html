@@ -753,6 +753,7 @@ const FIELD_MAP = {
   subjectName:'subject_name',
   className:'class_name',
   targetPhone:'target_phone',
+  twoFactorEnabled:'two_factor_enabled',
 };
 
 // ═══════════════════════════════════════════
@@ -1113,7 +1114,7 @@ function show2FAModal(){
   document.getElementById('twofa-code-input').value='';
 }
 
-function verify2FA(){
+async function verify2FA(){
   const entered=document.getElementById('twofa-code-input').value.trim();
   const errEl=document.getElementById('twofa-error');
   // Check expiry
@@ -1901,8 +1902,7 @@ async function executeTransfer(studentId){
   // Update student
   student.classId=newClassId;
   student.status='active';
-  student.transferHistory=student.transferHistory||[];
-  student.transferHistory.push({fromClassId:oldClassId,toClassId:newClassId,date:new Date().toISOString(),reason});
+  // transferHistory is not a DB column — transfer records are written to the transfer_log table separately
   await dbPut('students',student);
   await audit('TRANSFER_STUDENT',`${student.name} → class ${newClassId}`);
   toast('Student transferred successfully','success');
@@ -4585,7 +4585,7 @@ async function saveSecurityCfg(){
   cfg.twoFactorEnabled=document.getElementById('cfg-2fa').checked;
   cfg.attendanceAlert=attVal!==''?parseInt(attVal)||75:(cfg.attendanceAlert||75);
   await saveCfg('sessionTimeout',cfg.sessionTimeout);
-  await saveCfg('twoFactorEnabled',cfg.twoFactorEnabled);
+  await saveCfg('twoFactorEnabled',cfg.twoFactorEnabled?'true':'false'); // always save as string so loadConfig parses correctly
   await saveCfg('attendanceAlert',cfg.attendanceAlert);
   resetSessionTimer();
   await audit('SETTINGS_SECURITY','Security settings updated');
