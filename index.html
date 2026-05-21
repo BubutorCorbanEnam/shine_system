@@ -2291,8 +2291,8 @@ async function pgSubjects(){
           const passmark=s.passThreshold||cfgPassThreshold();
           return`<tr>
             <td><strong>${s.name}</strong></td>
-            <td>${s.classWeight||30}%</td>
-            <td>${100-(s.classWeight||30)}%</td>
+            <td>${s.classWeight||cfgClassScoreMax()}%</td>
+            <td>${100-(s.classWeight||cfgClassScoreMax())}%</td>
             <td><span class="badge badge-amber">${passmark}%</span></td>
             <td>${t?`<span class="subj-chip school-wide" style="font-size:12px">${t.name}</span>`:'<span style="color:var(--gray-400);font-size:12px">Unassigned</span>'}</td>
             <td><div style="display:flex;gap:4px">
@@ -2309,9 +2309,9 @@ async function openSubjectModal(id){
   const s=id?await dbGet('subjects',id):null;
   openModal(s?'Edit Subject':'Add Subject',`
     <div class="fg" style="margin-bottom:14px"><label>Subject Name *</label><input type="text" id="fsubj-name" value="${s?s.name:''}" placeholder="e.g. Mathematics"></div>
-    <div class="fg" style="margin-bottom:14px"><label>Class Score Weight (%) — default 30</label><input type="number" id="fsubj-cw" value="${s?s.classWeight||30:30}" min="10" max="60"></div>
+    <div class="fg" style="margin-bottom:14px"><label>Class Score Weight (%) — default ${cfgClassScoreMax()}</label><input type="number" id="fsubj-cw" value="${s?s.classWeight||cfgClassScoreMax():cfgClassScoreMax()}" min="10" max="60"></div>
     <div class="fg" style="margin-bottom:14px"><label>Pass Threshold (%) — overrides global setting</label><input type="number" id="fsubj-pass" value="${s?s.passThreshold||cfgPassThreshold():cfgPassThreshold()}" min="0" max="100"></div>
-    <p style="font-size:12px;color:var(--gray-400)">Exam weight: ${100-(s?s.classWeight||30:30)}%</p>`,
+    <p style="font-size:12px;color:var(--gray-400)">Exam weight: ${100-(s?s.classWeight||cfgClassScoreMax():cfgClassScoreMax())}%</p>`,
     `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveSubject(${id||'null'})">${s?'Update':'Add'}</button>`
   );
 }
@@ -2319,7 +2319,7 @@ async function openSubjectModal(id){
 async function saveSubject(id){
   const name=document.getElementById('fsubj-name').value.trim();
   if(!name)return alert('Subject name required');
-  const obj={name,classWeight:parseInt(document.getElementById('fsubj-cw').value)||30,passThreshold:parseInt(document.getElementById('fsubj-pass').value)||cfgPassThreshold()};
+  const obj={name,classWeight:parseInt(document.getElementById('fsubj-cw').value)||cfgClassScoreMax(),passThreshold:parseInt(document.getElementById('fsubj-pass').value)||cfgPassThreshold()};
   if(id){obj.id=id;await dbPut('subjects',obj);toast('Subject updated','success');}
   else{await dbAdd('subjects',obj);toast('Subject added','success');}
   closeModal();pgSubjects();
@@ -2329,7 +2329,7 @@ async function deleteSubject(id){if(!confirm2('Delete this subject?'))return;awa
 async function loadGESSubjects(){
   const list=['English Language','Mathematics','Integrated Science','Social Studies','Religious & Moral Education','Creative Arts & Design','Information & Communications Technology','French Language','Ghanaian Language','Physical & Health Education','Career Technology'];
   const existing=await dbGetAll('subjects');let added=0;
-  for(const name of list){if(!existing.find(s=>s.name===name)){await dbAdd('subjects',{name,classWeight:30,passThreshold:50});added++;}}
+  for(const name of list){if(!existing.find(s=>s.name===name)){await dbAdd('subjects',{name,classWeight:cfgClassScoreMax(),passThreshold:cfgPassThreshold()});added++;}}
   toast(`${added} subjects added`,'success');pgSubjects();
 }
 
@@ -2529,7 +2529,7 @@ function renderScoreTable(){
     <div class="sc2-header">
       <div>
         <h3>📚 ${subj.name} — ${scTerm}, ${scYear}</h3>
-        <div class="sc2-subheader">Class Total weight: <strong>30%</strong> &nbsp;|&nbsp; Exam weight: <strong>${examMax}%</strong> &nbsp;|&nbsp; Pass mark: <strong>${cfgPassThreshold()}%</strong></div>
+        <div class="sc2-subheader">Class Total weight: <strong>${cfgClassScoreMax()}%</strong> &nbsp;|&nbsp; Exam weight: <strong>${examMax}%</strong> &nbsp;|&nbsp; Pass mark: <strong>${cfgPassThreshold()}%</strong></div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-gold btn-sm" onclick="saveAllWorkScores()">💾 Save Scores</button>
@@ -2610,13 +2610,13 @@ function renderScoreTable(){
   <!-- FINAL RECORD PANEL -->
   <div class="sc2-final-panel" id="final-panel" style="margin-top:16px">
     <h4>📊 Final Record — ${subj.name}</h4>
-    <p>The 30% Class Score is automatically computed from all work items above. Enter each student's 70% Exam score to generate the final grade.</p>
+    <p>The ${cfgClassScoreMax()}% Class Score is automatically computed from all work items above. Enter each student's ${cfgExamScoreMax()}% Exam score to generate the final grade.</p>
     <div style="overflow-x:auto">
     <table class="sc2-final-tbl">
       <thead><tr>
         <th>Student</th>
         <th>Raw Class Avg</th>
-        <th>Class Score (30%)</th>
+        <th>Class Score (${cfgClassScoreMax()}%)</th>
         <th>Exam Score (${examMax}%)</th>
         <th>Total (100)</th>
         <th>Grade</th>
@@ -4447,7 +4447,7 @@ async function exportFailureReport(){
     if(!subjStats[sc.subjectId])subjStats[sc.subjectId]={total:0,failed:0,sum:0};
     subjStats[sc.subjectId].total++;subjStats[sc.subjectId].sum+=sc.total;
     const subj=subjects.find(s=>s.id===sc.subjectId);
-    const pass=subj?subj.passThreshold||50:50;
+    const pass=subj?subj.passThreshold||cfgPassThreshold():cfgPassThreshold();
     if(sc.total<pass)subjStats[sc.subjectId].failed++;
   });
   Object.entries(subjStats).forEach(([sid,d])=>{
