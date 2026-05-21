@@ -1492,15 +1492,12 @@ async function launchApp(){
   // absent — not on schoolName alone, which is seeded and may be transiently
   // empty after a slow DB load. Once the admin saves any settings, setupComplete
   // is written so this redirect never fires again.
-  const genuineFirstRun = currentUser.role==='admin'
-    && !cfg.currentTerm
-    && !cfg.academicYear
-    && !cfg.setupComplete;
-  if(genuineFirstRun){
-    navigate('settings');
-  } else {
-    navigate('dashboard');
-  }
+  // Redirect to settings only on genuine first run — when setupComplete has never
+  // been written. currentTerm/academicYear are seeded with defaults so they are
+  // never a reliable first-run signal. setupComplete is written the first time the
+  // admin saves Academic Settings, permanently suppressing this redirect.
+  const genuineFirstRun = currentUser.role === 'admin' && !cfg.setupComplete;
+  navigate(genuineFirstRun ? 'settings' : 'dashboard');
 }
 
 // SIDEBAR
@@ -1688,7 +1685,7 @@ async function pgDashboard(){
   let html=`<div class="page-header"><div><h2>Welcome back, ${currentUser.name.split(' ')[0]} 👋</h2><p>${cfgTerm()} · ${cfgYear()}</p></div></div>`;
 
   // Settings setup banner — shown when admin hasn't configured term/year yet
-  if(role==='admin'&&(!cfg.currentTerm||!cfg.academicYear)&&!cfg.setupComplete){
+  if(role==='admin'&&!cfg.setupComplete){
     html+=`<div class="warn-box" style="cursor:pointer;margin-bottom:16px" onclick="navigate('settings')">⚙️ <strong>Setup required:</strong> Academic Year and Current Term are not yet configured. <span style="color:var(--navy);font-weight:600">Go to Settings →</span></div>`;
   }
 
@@ -3409,7 +3406,7 @@ async function pgSettings(){
   const mc=document.getElementById('main-content');
   const isAdmin=currentUser.role==='admin';
   // First-run: only show welcome banner when term+year are genuinely absent and setup was never completed
-  const isFirstRun = isAdmin && !cfg.currentTerm && !cfg.academicYear && !cfg.setupComplete;
+  const isFirstRun = isAdmin && !cfg.setupComplete;
   mc.innerHTML=`
     <div class="page-header"><div><h2>⚙️ Settings</h2><p>All settings are saved to the database and take effect immediately.</p></div></div>
     ${isFirstRun?`<div class="warn-box" style="margin-bottom:20px">🎉 <strong>Welcome! First-time setup detected.</strong> Please fill in your school information and academic settings below, then click Save. All fields are optional — you can update them at any time.</div>`:''}
@@ -3572,6 +3569,8 @@ async function saveSchoolCfg(){
   await saveCfg('schoolMotto',motto);
   await saveCfg('schoolAddress',addr);
   await saveCfg('schoolPhone',phone);
+  // Sync into in-memory cfg so pgSettings re-renders with correct values
+  cfg.schoolName=name; cfg.schoolMotto=motto; cfg.schoolAddress=addr; cfg.schoolPhone=phone;
   // Reflect in topbar and auth screen immediately
   const displayName=name||'School Records';
   const nameEl=document.getElementById('topbar-school-name');
@@ -3614,13 +3613,17 @@ async function saveAcademicCfg(){
   if(passEl!=='') await saveCfg('passThreshold',parseInt(passEl)||0);
   const bestxEl=document.getElementById('cfg-bestx').value;
   if(bestxEl!=='') await saveCfg('bestXSubjects',parseInt(bestxEl)||0);
-  // Re-parse numerics after save
+  // Sync all academic fields into in-memory cfg immediately
+  cfg.academicYear=year;
+  cfg.currentTerm=term;
+  if(grading) cfg.gradingSystem=grading;
   if(csmax!==null) cfg.classScoreMax=csmax;
   if(esmax!==null) cfg.examScoreMax=esmax;
   cfg.passThreshold=passEl!==''?(parseInt(passEl)||0):cfg.passThreshold;
   cfg.bestXSubjects=bestxEl!==''?(parseInt(bestxEl)||0):cfg.bestXSubjects;
-  // Mark setup as complete so launchApp never redirects to settings again
-  if(!cfg.setupComplete) await saveCfg('setupComplete','true');
+  // Mark setup complete — idempotent upsert, safe to write on every save
+  cfg.setupComplete = 'true';
+  await saveCfg('setupComplete','true');
   await audit('SETTINGS_ACADEMIC',`Academic settings updated — ${cfg.currentTerm} ${cfg.academicYear}`);
   toast('Academic settings saved','success');
 }
@@ -3628,6 +3631,7 @@ async function saveEmailJSCfg(){
   const sId=document.getElementById('ejs-service').value.trim(),tId=document.getElementById('ejs-template').value.trim(),pKey=document.getElementById('ejs-pubkey').value.trim();
   await saveCfg('ejsServiceId',sId);await saveCfg('ejsTemplateId',tId);await saveCfg('ejsPublicKey',pKey);
   emailjsCfg={serviceId:sId,templateId:tId,publicKey:pKey};
+  cfg.ejsServiceId=sId; cfg.ejsTemplateId=tId; cfg.ejsPublicKey=pKey;
   if(pKey){try{emailjs.init(pKey);}catch(e){console.warn('EmailJS init error:',e);}}
   toast('EmailJS config saved','success');
 }
@@ -4584,6 +4588,7 @@ async function saveSecurityCfg(){
   cfg.sessionTimeout=timeoutVal!==''?parseInt(timeoutVal)||0:(cfg.sessionTimeout||0);
   cfg.twoFactorEnabled=document.getElementById('cfg-2fa').checked;
   cfg.attendanceAlert=attVal!==''?parseInt(attVal)||75:(cfg.attendanceAlert||75);
+  cfg.sessionTimeout=timeoutVal!==''?parseInt(timeoutVal)||0:(cfg.sessionTimeout||0);
   await saveCfg('sessionTimeout',cfg.sessionTimeout);
   await saveCfg('twoFactorEnabled',cfg.twoFactorEnabled?'true':'false'); // always save as string so loadConfig parses correctly
   await saveCfg('attendanceAlert',cfg.attendanceAlert);
@@ -5344,6 +5349,7 @@ async function rolloverStep2(){
 async function rolloverStep3(nextTerm,nextYear){
   if(!confirm(`Switch system to ${nextTerm} · ${nextYear}?`))return;
   await saveCfg('currentTerm',nextTerm);await saveCfg('academicYear',nextYear);
+  cfg.currentTerm=nextTerm; cfg.academicYear=nextYear;
   document.querySelectorAll('.rollover-step')[2].classList.add('done');
   await audit('ROLLOVER_STEP3',`Term switched to ${nextTerm} ${nextYear}`);
   toast(`System now on ${nextTerm} · ${nextYear}`,'success');
@@ -5463,11 +5469,19 @@ async function unlinkParent(userId){
 //  SMS / WHATSAPP ALERTS CONFIG (in Settings)
 // ═══════════════════════════════════════════
 async function saveSmsConfig(){
-  await saveCfg('smsProvider',document.getElementById('sms-provider').value);
-  await saveCfg('smsApiKey',document.getElementById('sms-apikey').value);
-  await saveCfg('smsFrom',document.getElementById('sms-from').value);
-  await saveCfg('waApiKey',document.getElementById('wa-apikey').value);
-  await saveCfg('waPhoneId',document.getElementById('wa-phone').value);
+  const provider=document.getElementById('sms-provider').value;
+  const apiKey=document.getElementById('sms-apikey').value;
+  const from=document.getElementById('sms-from').value;
+  const waKey=document.getElementById('wa-apikey').value;
+  const waPhone=document.getElementById('wa-phone').value;
+  await saveCfg('smsProvider',provider);
+  await saveCfg('smsApiKey',apiKey);
+  await saveCfg('smsFrom',from);
+  await saveCfg('waApiKey',waKey);
+  await saveCfg('waPhoneId',waPhone);
+  // Sync into in-memory cfg so settings page re-renders with correct values
+  cfg.smsProvider=provider; cfg.smsApiKey=apiKey; cfg.smsFrom=from;
+  cfg.waApiKey=waKey; cfg.waPhoneId=waPhone;
   await audit('SETTINGS_SMS','SMS/WA config updated');
   toast('Alert settings saved','success');
 }
