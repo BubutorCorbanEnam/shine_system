@@ -939,14 +939,23 @@ async function loadConfig(){
   Object.assign(window.AppConfig.settings, cfg);
   window.AppConfig.isInitialized = true;
 
+  // Persist to localStorage so settings survive page refresh even if DB is slow/blocked
+  try{ localStorage.setItem('sms_cfg_cache', JSON.stringify(cfg)); }catch(e){}
+
   if(emailjsCfg.publicKey) try{ emailjs.init(emailjsCfg.publicKey); }catch(e){}
 }
 async function saveCfg(key,value){
   cfg[key]=value;
-  // Upsert with merge-duplicates — prevents insert conflicts on existing keys (Correction 3)
+  // Upsert with merge-duplicates — prevents insert conflicts on existing keys
   await sbReq('POST','settings',{key,value:`${value}`},'on_conflict=key',{'Prefer':'resolution=merge-duplicates'});
   // Refresh local AppConfig cache
   window.AppConfig.settings[key] = value;
+  // Keep localStorage cache in sync so refresh always shows latest saved values
+  try{
+    const cached=JSON.parse(localStorage.getItem('sms_cfg_cache')||'{}');
+    cached[key]=value;
+    localStorage.setItem('sms_cfg_cache', JSON.stringify(cached));
+  }catch(e){}
   // Hide initialization modal if still visible
   const initModal = document.getElementById('initialization-modal');
   if(initModal) initModal.style.display = 'none';
@@ -3404,8 +3413,11 @@ async function createUser(){
 // ═══════════════════════════════════════════
 async function pgSettings(){
   const mc=document.getElementById('main-content');
+  // Always reload config before rendering so form shows the latest DB values,
+  // not stale in-memory state from a previous navigation
+  try{ await loadConfig(); }catch(e){}
   const isAdmin=currentUser.role==='admin';
-  // First-run: only show welcome banner when term+year are genuinely absent and setup was never completed
+  // First-run: only show welcome banner when setup was never completed
   const isFirstRun = isAdmin && !cfg.setupComplete;
   mc.innerHTML=`
     <div class="page-header"><div><h2>⚙️ Settings</h2><p>All settings are saved to the database and take effect immediately.</p></div></div>
@@ -4601,6 +4613,14 @@ async function saveSecurityCfg(){
 //  INIT
 // ═══════════════════════════════════════════
 async function init(){
+  // Hydrate cfg from localStorage cache immediately — before any async DB call.
+  // This ensures settings are available instantly on refresh without waiting for
+  // the network, and provides a fallback if the DB load fails.
+  try{
+    const cached=localStorage.getItem('sms_cfg_cache');
+    if(cached){ Object.assign(cfg, JSON.parse(cached)); }
+  }catch(e){}
+
   // Guard: fail fast and clearly if Supabase credentials have not been configured
   if(!SUPABASE_URL||!SUPABASE_ANON_KEY){
     document.body.innerHTML=`<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0F1F3D;font-family:'Outfit',sans-serif">
