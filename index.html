@@ -897,8 +897,8 @@ let cfg={};
 function cfgTerm(){return cfg.currentTerm||'(Term not set)';}
 function cfgYear(){return cfg.academicYear||'(Year not set)';}
 function cfgPassThreshold(){return cfg.passThreshold!=null?Number(cfg.passThreshold):50;}
-function cfgClassScoreMax(){return cfg.classScoreMax!=null?Number(cfg.classScoreMax):30;}
-function cfgExamScoreMax(){return cfg.examScoreMax!=null?Number(cfg.examScoreMax):70;}
+function cfgClassScoreMax(){return cfg.classScoreMax!=null?Number(cfg.classScoreMax):40;}
+function cfgExamScoreMax(){return cfg.examScoreMax!=null?Number(cfg.examScoreMax):60;}
 function cfgSchoolName(){return cfg.schoolName||'School Management System';}
 async function loadConfig(){
   const all=await dbGetAll('settings');
@@ -3457,10 +3457,10 @@ async function pgSettings(){
           </select>
         </div>
         <div class="fg"><label>Class Score Max <span style="font-size:11px;color:var(--gray-400)">(must sum to 100 with Exam)</span></label>
-          <input type="number" id="cfg-csmax" value="${cfg.classScoreMax!==undefined?cfg.classScoreMax:''}" min="10" max="60" placeholder="e.g. 30">
+          <input type="number" id="cfg-csmax" value="${cfg.classScoreMax!==undefined?cfg.classScoreMax:''}" min="10" max="60" placeholder="e.g. 40">
         </div>
         <div class="fg"><label>Exam Score Max</label>
-          <input type="number" id="cfg-esmax" value="${cfg.examScoreMax!==undefined?cfg.examScoreMax:''}" min="40" max="90" placeholder="e.g. 70">
+          <input type="number" id="cfg-esmax" value="${cfg.examScoreMax!==undefined?cfg.examScoreMax:''}" min="40" max="90" placeholder="e.g. 60">
         </div>
         <div class="fg"><label>Global Pass Threshold (%)</label>
           <input type="number" id="cfg-pass" value="${cfg.passThreshold!==undefined?cfg.passThreshold:''}" min="0" max="100" placeholder="e.g. 50">
