@@ -905,14 +905,12 @@ async function loadConfig(){
   // Load all settings from DB — no hardcoded defaults; values stay exactly as stored
   all.forEach(s=>cfg[s.key]=s.value);
 
-  // ── Numeric settings — parse from string (Supabase stores as text) ──
-  // Use a safe parser: returns the parsed int if valid, or undefined to allow
-  // cfgClassScoreMax()/cfgExamScoreMax()/cfgPassThreshold() to apply their defaults.
-  function safeInt(v){ const n=parseInt(v); return isNaN(n)?undefined:n; }
-  cfg.classScoreMax   = cfg.classScoreMax   !== undefined ? safeInt(cfg.classScoreMax)   : undefined;
-  cfg.examScoreMax    = cfg.examScoreMax    !== undefined ? safeInt(cfg.examScoreMax)    : undefined;
-  cfg.bestXSubjects   = cfg.bestXSubjects   !== undefined ? (safeInt(cfg.bestXSubjects)??0) : 0;
-  cfg.passThreshold   = cfg.passThreshold   !== undefined ? safeInt(cfg.passThreshold)   : undefined;
+  // ── Numeric settings — parse from string safely ──────────────────────────
+  function safeInt(v){const n=parseInt(v);return isNaN(n)?undefined:n;}
+  cfg.classScoreMax   = cfg.classScoreMax   !== undefined ? safeInt(cfg.classScoreMax)        : undefined;
+  cfg.examScoreMax    = cfg.examScoreMax    !== undefined ? safeInt(cfg.examScoreMax)          : undefined;
+  cfg.bestXSubjects   = cfg.bestXSubjects   !== undefined ? (safeInt(cfg.bestXSubjects)??0)   : 0;
+  cfg.passThreshold   = cfg.passThreshold   !== undefined ? safeInt(cfg.passThreshold)        : undefined;
   cfg.sessionTimeout  = cfg.sessionTimeout  !== undefined ? (safeInt(cfg.sessionTimeout)??30) : 30;
   cfg.attendanceAlert = cfg.attendanceAlert !== undefined ? (safeInt(cfg.attendanceAlert)??75) : 75;
 
@@ -1477,19 +1475,19 @@ async function applyNewPassword(){
 //  APP LAUNCH
 // ═══════════════════════════════════════════
 async function launchApp(){
-  // Always reload config FRESH from DB at login time.
-  // This ensures every user (teacher, parent) always sees the admin's
-  // latest settings (term, year, score weights, pass threshold) immediately
-  // on login — never stale localStorage-cached values.
-  try{
-    await loadConfig();
-  }catch(e){
-    console.warn('Config reload failed — falling back to cache:', e);
-    try{
-      const cached=localStorage.getItem('sms_cfg_cache');
-      if(cached) Object.assign(cfg, JSON.parse(cached));
-    }catch(ce){}
-    setTimeout(()=>toast('\u26a0\ufe0f Settings could not load from server. Values may be outdated.','error'),1500);
+  // Always reload config FRESH from DB at login. Retry once on failure so a
+  // brief network hiccup does not leave teachers/parents with blank term/year.
+  let cfgLoaded=false;
+  for(let attempt=1;attempt<=2;attempt++){
+    try{ await loadConfig(); cfgLoaded=true; break; }
+    catch(e){
+      console.warn(`loadConfig attempt ${attempt} failed:`,e);
+      if(attempt<2) await new Promise(r=>setTimeout(r,1200));
+    }
+  }
+  if(!cfgLoaded){
+    try{ const c=localStorage.getItem('sms_cfg_cache'); if(c) Object.assign(cfg,JSON.parse(c)); }catch(ce){}
+    console.warn('Settings could not load from server — using cached values.');
   }
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app').classList.add('visible');
@@ -3484,6 +3482,25 @@ async function pgSettings(){
         <button class="btn btn-primary" onclick="saveAcademicCfg()">💾 Save Academic Settings</button>
       </div></div>
 
+      <div class="card"><div class="card-header"><h3>🔄 Subject Score Settings Migration</h3></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+        <p style="font-size:13px;color:var(--gray-500);margin:0">
+          Subjects created before you updated the score settings above may still have old values
+          (e.g. Class Weight: 30, Pass Threshold: 50) stored in the database. Click below to
+          update <strong>all existing subjects</strong> to match your current admin settings.
+        </p>
+        <div style="background:var(--yellow-50,#fffbeb);border:1px solid var(--yellow-200,#fde68a);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--yellow-800,#92400e)">
+          ⚠️ <strong>This will overwrite any custom per-subject weights</strong> you have set individually.
+          Only run this if you want all subjects to use the global settings above.
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="migrateSubjectSettings()" id="btn-migrate-subjects">
+            🔄 Apply Current Settings to All Subjects
+          </button>
+          <span id="migrate-status" style="font-size:13px;color:var(--gray-500)"></span>
+        </div>
+      </div></div>
+
       <div class="card"><div class="card-header"><h3>🔒 Security Settings</h3></div><div class="card-body" style="display:flex;flex-direction:column;gap:12px">
         <div class="fg">
           <label>Session Timeout (minutes, 0 = disabled)</label>
@@ -3652,6 +3669,81 @@ async function saveAcademicCfg(){
   await audit('SETTINGS_ACADEMIC',`Academic settings updated — ${cfgTerm()} ${cfgYear()}`);
   toast('Academic settings saved','success');
 }
+async function migrateSubjectSettings(){
+  const btn=document.getElementById('btn-migrate-subjects');
+  const status=document.getElementById('migrate-status');
+  const newClassWeight=cfgClassScoreMax();
+  const newPassThreshold=cfgPassThreshold();
+
+  // Confirm before overwriting per-subject customisations
+  const confirmed=await new Promise(resolve=>{
+    showModal(
+      '🔄 Apply Settings to All Subjects',
+      `<p style="margin:0 0 12px">This will update <strong>every subject</strong> in the database to:</p>
+       <ul style="margin:0 0 12px;padding-left:20px;line-height:1.8">
+         <li>Class Score Weight → <strong>${newClassWeight}%</strong></li>
+         <li>Exam Score Weight  → <strong>${100-newClassWeight}%</strong></li>
+         <li>Pass Threshold     → <strong>${newPassThreshold}%</strong></li>
+       </ul>
+       <p style="margin:0;color:var(--red,#dc2626);font-size:13px">⚠️ Any custom per-subject weights will be overwritten.</p>`,
+      [{label:'Cancel',  action:()=>resolve(false), class:'btn-secondary'},
+       {label:'Apply to All Subjects', action:()=>resolve(true),  class:'btn-primary'}]
+    );
+  });
+  if(!confirmed) return;
+
+  btn.disabled=true;
+  btn.textContent='⏳ Updating…';
+  status.textContent='';
+
+  try{
+    const subjects=await dbGetAll('subjects');
+    if(!subjects||subjects.length===0){
+      toast('No subjects found to update.','error');
+      btn.disabled=false; btn.textContent='🔄 Apply Current Settings to All Subjects';
+      return;
+    }
+
+    let updated=0; let failed=0;
+    for(const subj of subjects){
+      try{
+        await dbUpdate('subjects', subj.id, {
+          ...subj,
+          classWeight:   newClassWeight,
+          passThreshold: newPassThreshold
+        });
+        updated++;
+      }catch(e){
+        console.warn(`Failed to update subject ${subj.name}:`, e);
+        failed++;
+      }
+      // Update progress
+      status.textContent=`Updating… ${updated+failed}/${subjects.length}`;
+    }
+
+    // Refresh in-memory subjects list if it exists
+    try{ subjects.forEach(s=>{ s.classWeight=newClassWeight; s.passThreshold=newPassThreshold; }); }catch(e){}
+
+    await audit('MIGRATE_SUBJECTS',
+      `Applied classWeight=${newClassWeight} passThreshold=${newPassThreshold} to ${updated} subjects`);
+
+    if(failed===0){
+      toast(`✅ All ${updated} subject${updated===1?'':'s'} updated successfully.`,'success');
+      status.textContent=`✅ ${updated} subject${updated===1?'':'s'} updated.`;
+    } else {
+      toast(`⚠️ ${updated} updated, ${failed} failed. Check console.`,'error');
+      status.textContent=`⚠️ ${updated} updated, ${failed} failed.`;
+    }
+  }catch(e){
+    console.error('Migration error:',e);
+    toast('Migration failed — check your connection.','error');
+    status.textContent='❌ Migration failed.';
+  }
+
+  btn.disabled=false;
+  btn.textContent='🔄 Apply Current Settings to All Subjects';
+}
+
 async function saveEmailJSCfg(){
   const sId=document.getElementById('ejs-service').value.trim(),tId=document.getElementById('ejs-template').value.trim(),pKey=document.getElementById('ejs-pubkey').value.trim();
   await saveCfg('ejsServiceId',sId);await saveCfg('ejsTemplateId',tId);await saveCfg('ejsPublicKey',pKey);
@@ -4626,15 +4718,13 @@ async function saveSecurityCfg(){
 //  INIT
 // ═══════════════════════════════════════════
 async function init(){
-  // Pre-hydrate cfg from localStorage cache so the login screen has school name/logo
-  // instantly. This is display-only — launchApp() always overwrites with a fresh DB
-  // load after login, so teachers/parents never get stale academic settings.
+  // Pre-hydrate display-only fields from cache so the login screen shows
+  // school name/logo instantly. All academic settings are always loaded fresh
+  // from DB in launchApp() so every user sees exactly what the admin configured.
   try{
     const cached=localStorage.getItem('sms_cfg_cache');
     if(cached){
       const c=JSON.parse(cached);
-      // Only hydrate display fields here — numeric academic settings will be
-      // loaded fresh from DB in launchApp(), preventing stale values for non-admin users.
       if(c.schoolName) cfg.schoolName=c.schoolName;
       if(c.schoolLogo) cfg.schoolLogo=c.schoolLogo;
       if(c.darkMode)   cfg.darkMode=c.darkMode;
@@ -4707,7 +4797,7 @@ async function pgDataManagement(){
         </div>
         <div class="fg">
           <label>Academic Year</label>
-          <input type="text" id="dm-year" value="${cfg.academicYear||''}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:6px;font-family:Outfit,sans-serif">
+          <input type="text" id="dm-year" value="${cfgYear()||''}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:6px;font-family:Outfit,sans-serif">
         </div>
         <button class="btn" style="background:#fff3cd;color:#856404;border:1px solid #ffc107" onclick="clearByTerm('scores')">Clear Scores for Term</button>
         <button class="btn" style="background:#fff3cd;color:#856404;border:1px solid #ffc107" onclick="clearByTerm('attendance')">Clear Attendance for Term</button>
@@ -5159,7 +5249,7 @@ async function saveTimetableSlot(){
   const subjId=parseInt(document.getElementById('tt-subj').value)||null;
   if(!date||!subjId){toast('Date and subject required','error');return;}
   const classId=parseInt(document.getElementById('tt-class').value)||null;
-  await dbAdd('timetables',{date,subjectId:subjId,classId,startTime:document.getElementById('tt-start').value,endTime:document.getElementById('tt-end').value,venue:document.getElementById('tt-venue').value,duration:document.getElementById('tt-dur').value,notes:document.getElementById('tt-notes').value,term:cfg.currentTerm,academicYear:cfg.academicYear,createdBy:currentUser.id});
+  await dbAdd('timetables',{date,subjectId:subjId,classId,startTime:document.getElementById('tt-start').value,endTime:document.getElementById('tt-end').value,venue:document.getElementById('tt-venue').value,duration:document.getElementById('tt-dur').value,notes:document.getElementById('tt-notes').value,term:cfgTerm(),academicYear:cfgYear(),createdBy:currentUser.id});
   await audit('ADD_TIMETABLE',`Exam slot added: ${date}`);
   toast('Slot added','success');closeModal();pgTimetable();
 }
@@ -5205,7 +5295,7 @@ async function openAwardModal(){
       <div class="fg"><label>Award Title *</label><input type="text" id="aw-title" placeholder="e.g. Best in Mathematics"></div>
       <div class="fg"><label>Award Icon</label><select id="aw-icon"><option value="🏆">🏆 Trophy</option><option value="🥇">🥇 Gold Medal</option><option value="⭐">⭐ Star</option><option value="📚">📚 Academic</option><option value="🎖️">🎖️ Merit</option><option value="🌟">🌟 Excellence</option></select></div>
       <div class="fg"><label>Term</label><select id="aw-term"><option>Term 1</option><option ${cfg.currentTerm==='Term 2'?'selected':''}>Term 2</option><option ${cfg.currentTerm==='Term 3'?'selected':''}>Term 3</option></select></div>
-      <div class="fg"><label>Academic Year</label><input type="text" id="aw-year" value="${cfg.academicYear}"></div>
+      <div class="fg"><label>Academic Year</label><input type="text" id="aw-year" value="${cfgYear()}"></div>
       <div class="fg full"><label>Description</label><textarea id="aw-desc" style="min-height:60px" placeholder="Reason for this award…"></textarea></div>
     </div>`,
     `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="saveAward()">🏅 Give Award</button>`
