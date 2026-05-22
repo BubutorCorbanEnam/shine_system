@@ -905,8 +905,9 @@ async function loadConfig(){
   // Load all settings from DB — no hardcoded defaults; values stay exactly as stored
   all.forEach(s=>cfg[s.key]=s.value);
 
-  // ── Numeric settings — parse from string safely ──────────────────────────
-  function safeInt(v){const n=parseInt(v);return isNaN(n)?undefined:n;}
+  // ── Numeric settings: safeInt returns the parsed value, or undefined for
+  // blank/null/NaN — allowing cfg*() helpers to apply correct defaults.
+  function safeInt(v){const n=parseInt(v); return isNaN(n)?undefined:n;}
   cfg.classScoreMax   = cfg.classScoreMax   !== undefined ? safeInt(cfg.classScoreMax)        : undefined;
   cfg.examScoreMax    = cfg.examScoreMax    !== undefined ? safeInt(cfg.examScoreMax)          : undefined;
   cfg.bestXSubjects   = cfg.bestXSubjects   !== undefined ? (safeInt(cfg.bestXSubjects)??0)   : 0;
@@ -1476,7 +1477,7 @@ async function applyNewPassword(){
 // ═══════════════════════════════════════════
 async function launchApp(){
   // Always reload config FRESH from DB at login. Retry once on failure so a
-  // brief network hiccup does not leave teachers/parents with blank term/year.
+  // brief network hiccup does not leave any user with blank term/year/scores.
   let cfgLoaded=false;
   for(let attempt=1;attempt<=2;attempt++){
     try{ await loadConfig(); cfgLoaded=true; break; }
@@ -1486,8 +1487,9 @@ async function launchApp(){
     }
   }
   if(!cfgLoaded){
+    // Both attempts failed — fall back to localStorage cache silently
     try{ const c=localStorage.getItem('sms_cfg_cache'); if(c) Object.assign(cfg,JSON.parse(c)); }catch(ce){}
-    console.warn('Settings could not load from server — using cached values.');
+    console.warn('Settings could not be loaded from DB — using cached values.');
   }
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app').classList.add('visible');
@@ -3468,16 +3470,16 @@ async function pgSettings(){
           </select>
         </div>
         <div class="fg"><label>Class Score Max <span style="font-size:11px;color:var(--gray-400)">(must sum to 100 with Exam)</span></label>
-          <input type="number" id="cfg-csmax" value="${cfg.classScoreMax!==undefined?cfg.classScoreMax:''}" min="10" max="60" placeholder="e.g. 40">
+          <input type="number" id="cfg-csmax" value="${cfg.classScoreMax!=null?cfg.classScoreMax:cfgClassScoreMax()}" min="10" max="60" placeholder="e.g. 40">
         </div>
         <div class="fg"><label>Exam Score Max</label>
-          <input type="number" id="cfg-esmax" value="${cfg.examScoreMax!==undefined?cfg.examScoreMax:''}" min="40" max="90" placeholder="e.g. 60">
+          <input type="number" id="cfg-esmax" value="${cfg.examScoreMax!=null?cfg.examScoreMax:cfgExamScoreMax()}" min="40" max="90" placeholder="e.g. 60">
         </div>
         <div class="fg"><label>Global Pass Threshold (%)</label>
-          <input type="number" id="cfg-pass" value="${cfg.passThreshold!==undefined?cfg.passThreshold:''}" min="0" max="100" placeholder="e.g. 50">
+          <input type="number" id="cfg-pass" value="${cfg.passThreshold!=null?cfg.passThreshold:cfgPassThreshold()}" min="0" max="100" placeholder="e.g. 50">
         </div>
         <div class="fg"><label>Best X Subjects for Aggregate <span style="font-size:11px;color:var(--gray-400)">(0 = all subjects)</span></label>
-          <input type="number" id="cfg-bestx" value="${cfg.bestXSubjects!==undefined?cfg.bestXSubjects:''}" min="0" max="20" placeholder="e.g. 0">
+          <input type="number" id="cfg-bestx" value="${cfg.bestXSubjects!=null?cfg.bestXSubjects:0}" min="0" max="20" placeholder="e.g. 0">
         </div>
         <button class="btn btn-primary" onclick="saveAcademicCfg()">💾 Save Academic Settings</button>
       </div></div>
@@ -3504,7 +3506,7 @@ async function pgSettings(){
       <div class="card"><div class="card-header"><h3>🔒 Security Settings</h3></div><div class="card-body" style="display:flex;flex-direction:column;gap:12px">
         <div class="fg">
           <label>Session Timeout (minutes, 0 = disabled)</label>
-          <input type="number" id="cfg-timeout" value="${cfg.sessionTimeout!==undefined?cfg.sessionTimeout:''}" min="0" max="480" placeholder="e.g. 40">
+          <input type="number" id="cfg-timeout" value="${cfg.sessionTimeout!==undefined?cfg.sessionTimeout:''}" min="0" max="480" placeholder="e.g. 30">
         </div>
         <div class="fg">
           <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
@@ -3638,47 +3640,56 @@ async function removeSchoolLogo(){
 async function saveAcademicCfg(){
   const csmaxEl=document.getElementById('cfg-csmax');
   const esmaxEl=document.getElementById('cfg-esmax');
-  const csmax=csmaxEl.value!==''?parseInt(csmaxEl.value):null;
-  const esmax=esmaxEl.value!==''?parseInt(esmaxEl.value):null;
-  if(csmax!==null&&esmax!==null&&csmax+esmax!==100){toast('Class Score Max + Exam Score Max must sum to 100.','error');return;}
+  // Use field value if filled, otherwise fall back to current cfg value, then GES default
+  const csmax=csmaxEl.value!==''?parseInt(csmaxEl.value):(cfg.classScoreMax??cfgClassScoreMax());
+  const esmax=esmaxEl.value!==''?parseInt(esmaxEl.value):(cfg.examScoreMax??cfgExamScoreMax());
+  if(csmax+esmax!==100){toast('Class Score Max + Exam Score Max must sum to 100.','error');return;}
   const year=document.getElementById('cfg-year').value.trim();
   const term=document.getElementById('cfg-term').value;
   if(!year){toast('Academic Year is required','error');return;}
   if(!term){toast('Please select a Current Term','error');return;}
-  await saveCfg('academicYear',year);
-  await saveCfg('currentTerm',term);
   const grading=document.getElementById('cfg-grading').value;
-  if(grading) await saveCfg('gradingSystem',grading);
-  if(csmax!==null) await saveCfg('classScoreMax',csmax);
-  if(esmax!==null) await saveCfg('examScoreMax',esmax);
   const passEl=document.getElementById('cfg-pass').value;
-  if(passEl!=='') await saveCfg('passThreshold',parseInt(passEl)||0);
+  const pass=passEl!==''?parseInt(passEl):(cfg.passThreshold??cfgPassThreshold());
   const bestxEl=document.getElementById('cfg-bestx').value;
-  if(bestxEl!=='') await saveCfg('bestXSubjects',parseInt(bestxEl)||0);
-  // Sync all academic fields into in-memory cfg immediately
-  cfg.academicYear=year;
-  cfg.currentTerm=term;
-  if(grading) cfg.gradingSystem=grading;
-  if(csmax!==null) cfg.classScoreMax=csmax;
-  if(esmax!==null) cfg.examScoreMax=esmax;
-  cfg.passThreshold=passEl!==''?(parseInt(passEl)||0):cfg.passThreshold;
-  cfg.bestXSubjects=bestxEl!==''?(parseInt(bestxEl)||0):cfg.bestXSubjects;
-  // Mark setup complete — idempotent upsert, safe to write on every save
-  cfg.setupComplete = 'true';
+  const bestx=bestxEl!==''?parseInt(bestxEl):(cfg.bestXSubjects??0);
+
+  // Always write EVERY field to DB — no conditional skipping.
+  // This ensures any device that loads config from DB gets the complete picture,
+  // not a partial set of values left over from the seed data.
+  await saveCfg('academicYear',   year);
+  await saveCfg('currentTerm',    term);
+  await saveCfg('gradingSystem',  grading||cfg.gradingSystem||'ges');
+  await saveCfg('classScoreMax',  csmax);
+  await saveCfg('examScoreMax',   esmax);
+  await saveCfg('passThreshold',  pass);
+  await saveCfg('bestXSubjects',  bestx);
+
+  // Sync into in-memory cfg immediately so the UI reflects changes without reload
+  cfg.academicYear   = year;
+  cfg.currentTerm    = term;
+  cfg.gradingSystem  = grading||cfg.gradingSystem||'ges';
+  cfg.classScoreMax  = csmax;
+  cfg.examScoreMax   = esmax;
+  cfg.passThreshold  = pass;
+  cfg.bestXSubjects  = bestx;
+
+  // Persist to localStorage cache so this device survives a page refresh
+  try{ localStorage.setItem('sms_cfg_cache', JSON.stringify(cfg)); }catch(e){}
+
+  // Mark setup complete
+  cfg.setupComplete='true';
   await saveCfg('setupComplete','true');
   await audit('SETTINGS_ACADEMIC',`Academic settings updated — ${cfgTerm()} ${cfgYear()}`);
-  toast('Academic settings saved','success');
+  toast('Academic settings saved — all devices will reflect these changes on next login.','success');
 }
 async function migrateSubjectSettings(){
   const btn=document.getElementById('btn-migrate-subjects');
   const status=document.getElementById('migrate-status');
   const newClassWeight=cfgClassScoreMax();
   const newPassThreshold=cfgPassThreshold();
-
-  // Confirm before overwriting per-subject customisations
   const confirmed=await new Promise(resolve=>{
-    showModal(
-      '🔄 Apply Settings to All Subjects',
+    showModal('🔄 Apply Settings to All Subjects',
       `<p style="margin:0 0 12px">This will update <strong>every subject</strong> in the database to:</p>
        <ul style="margin:0 0 12px;padding-left:20px;line-height:1.8">
          <li>Class Score Weight → <strong>${newClassWeight}%</strong></li>
@@ -3686,47 +3697,27 @@ async function migrateSubjectSettings(){
          <li>Pass Threshold     → <strong>${newPassThreshold}%</strong></li>
        </ul>
        <p style="margin:0;color:var(--red,#dc2626);font-size:13px">⚠️ Any custom per-subject weights will be overwritten.</p>`,
-      [{label:'Cancel',  action:()=>resolve(false), class:'btn-secondary'},
-       {label:'Apply to All Subjects', action:()=>resolve(true),  class:'btn-primary'}]
+      [{label:'Cancel',action:()=>resolve(false),class:'btn-secondary'},
+       {label:'Apply to All Subjects',action:()=>resolve(true),class:'btn-primary'}]
     );
   });
   if(!confirmed) return;
-
-  btn.disabled=true;
-  btn.textContent='⏳ Updating…';
-  status.textContent='';
-
+  btn.disabled=true; btn.textContent='⏳ Updating…'; status.textContent='';
   try{
     const subjects=await dbGetAll('subjects');
     if(!subjects||subjects.length===0){
       toast('No subjects found to update.','error');
-      btn.disabled=false; btn.textContent='🔄 Apply Current Settings to All Subjects';
-      return;
+      btn.disabled=false; btn.textContent='🔄 Apply Current Settings to All Subjects'; return;
     }
-
-    let updated=0; let failed=0;
+    let updated=0,failed=0;
     for(const subj of subjects){
       try{
-        await dbUpdate('subjects', subj.id, {
-          ...subj,
-          classWeight:   newClassWeight,
-          passThreshold: newPassThreshold
-        });
+        await dbUpdate('subjects',subj.id,{...subj,classWeight:newClassWeight,passThreshold:newPassThreshold});
         updated++;
-      }catch(e){
-        console.warn(`Failed to update subject ${subj.name}:`, e);
-        failed++;
-      }
-      // Update progress
+      }catch(e){ console.warn(`Failed to update subject ${subj.name}:`,e); failed++; }
       status.textContent=`Updating… ${updated+failed}/${subjects.length}`;
     }
-
-    // Refresh in-memory subjects list if it exists
-    try{ subjects.forEach(s=>{ s.classWeight=newClassWeight; s.passThreshold=newPassThreshold; }); }catch(e){}
-
-    await audit('MIGRATE_SUBJECTS',
-      `Applied classWeight=${newClassWeight} passThreshold=${newPassThreshold} to ${updated} subjects`);
-
+    await audit('MIGRATE_SUBJECTS',`Applied classWeight=${newClassWeight} passThreshold=${newPassThreshold} to ${updated} subjects`);
     if(failed===0){
       toast(`✅ All ${updated} subject${updated===1?'':'s'} updated successfully.`,'success');
       status.textContent=`✅ ${updated} subject${updated===1?'':'s'} updated.`;
@@ -3739,9 +3730,7 @@ async function migrateSubjectSettings(){
     toast('Migration failed — check your connection.','error');
     status.textContent='❌ Migration failed.';
   }
-
-  btn.disabled=false;
-  btn.textContent='🔄 Apply Current Settings to All Subjects';
+  btn.disabled=false; btn.textContent='🔄 Apply Current Settings to All Subjects';
 }
 
 async function saveEmailJSCfg(){
@@ -4718,9 +4707,11 @@ async function saveSecurityCfg(){
 //  INIT
 // ═══════════════════════════════════════════
 async function init(){
-  // Pre-hydrate display-only fields from cache so the login screen shows
-  // school name/logo instantly. All academic settings are always loaded fresh
-  // from DB in launchApp() so every user sees exactly what the admin configured.
+  // Pre-hydrate DISPLAY-ONLY fields (school name, logo, theme) from cache so
+  // the login screen renders instantly. All academic settings (term, year,
+  // score weights, pass threshold) are always loaded fresh from DB in
+  // launchApp() — never from stale cache — so every user on every device
+  // always sees exactly what the admin most recently saved.
   try{
     const cached=localStorage.getItem('sms_cfg_cache');
     if(cached){
