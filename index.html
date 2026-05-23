@@ -905,10 +905,8 @@ async function loadConfig(){
   // Load all settings from DB — no hardcoded defaults; values stay exactly as stored
   all.forEach(s=>cfg[s.key]=s.value);
 
-  // ── Numeric settings: safeInt returns parsed value or undefined for blanks.
-  // The old parseInt(v)||0 silently turned null into 0, making cfgClassScoreMax()
-  // return 0 instead of the 40 default on fresh devices with no cached values.
-  function safeInt(v){const n=parseInt(v); return isNaN(n)?undefined:n;}
+  // ── Numeric settings — parse from string (Supabase stores as text); 0 stays 0 ──
+  function safeInt(v){const n=parseInt(v);return isNaN(n)?undefined:n;}
   cfg.classScoreMax   = cfg.classScoreMax   !== undefined ? safeInt(cfg.classScoreMax)        : undefined;
   cfg.examScoreMax    = cfg.examScoreMax    !== undefined ? safeInt(cfg.examScoreMax)          : undefined;
   cfg.bestXSubjects   = cfg.bestXSubjects   !== undefined ? (safeInt(cfg.bestXSubjects)??0)   : 0;
@@ -949,8 +947,23 @@ async function loadConfig(){
 }
 async function saveCfg(key,value){
   cfg[key]=value;
-  // Upsert with merge-duplicates — prevents insert conflicts on existing keys
-  await sbReq('POST','settings',{key,value:`${value}`},'on_conflict=key',{'Prefer':'resolution=merge-duplicates'});
+  const strVal=`${value}`;
+
+  // Use PATCH (update) targeting the specific key row — this is unambiguous and
+  // guaranteed to update the existing row in Supabase regardless of PostgREST version.
+  // Falls back to POST (insert) if the row doesn't exist yet (new installs).
+  try{
+    await sbReq('PATCH','settings',{value:strVal},`key=eq.${encodeURIComponent(key)}`);
+  }catch(patchErr){
+    // Row may not exist yet — try insert
+    try{
+      await sbReq('POST','settings',{key,value:strVal},'on_conflict=key',{'Prefer':'resolution=merge-duplicates'});
+    }catch(postErr){
+      console.error(`saveCfg failed for key "${key}":`,postErr);
+      throw postErr;
+    }
+  }
+
   // Refresh local AppConfig cache
   window.AppConfig.settings[key] = value;
   // Keep localStorage cache in sync so refresh always shows latest saved values
@@ -1477,28 +1490,17 @@ async function applyNewPassword(){
 //  APP LAUNCH
 // ═══════════════════════════════════════════
 async function launchApp(){
-  // Reload config FRESH from Supabase DB at every login.
-  // This makes settings propagate like student records:
-  // DB is the single source of truth, every device reads the same values.
-  // Retry once with 1.5s gap so a brief network blip doesn't break things.
-  let cfgLoaded = false;
-  for(let attempt = 1; attempt <= 2; attempt++){
-    try{
-      await loadConfig();
-      cfgLoaded = true;
-      break;
-    }catch(e){
-      console.warn(`[launchApp] loadConfig attempt ${attempt} failed:`, e);
-      if(attempt < 2) await new Promise(r => setTimeout(r, 1500));
+  let cfgLoaded=false;
+  for(let attempt=1;attempt<=2;attempt++){
+    try{await loadConfig();cfgLoaded=true;break;}
+    catch(e){
+      console.warn(`loadConfig attempt ${attempt} failed:`,e);
+      if(attempt<2) await new Promise(r=>setTimeout(r,1500));
     }
   }
   if(!cfgLoaded){
-    console.error('[launchApp] Could not load settings from DB after 2 attempts.');
-    // Last resort: use whatever cache this device has
-    try{
-      const c = localStorage.getItem('sms_cfg_cache');
-      if(c) Object.assign(cfg, JSON.parse(c));
-    }catch(ce){}
+    try{const c=localStorage.getItem('sms_cfg_cache');if(c)Object.assign(cfg,JSON.parse(c));}catch(ce){}
+    console.error('Could not load settings from DB — using cached values.');
   }
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app').classList.add('visible');
@@ -3496,14 +3498,12 @@ async function pgSettings(){
       <div class="card"><div class="card-header"><h3>📡 Push Settings to All Devices</h3></div>
       <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
         <p style="font-size:13px;color:var(--gray-500);margin:0">
-          Teachers or parents on other devices seeing wrong term, year, or score weights?
-          This button <strong>force-writes every setting directly to the database right now</strong>.
-          Every user will see the correct values on their next login — exactly like how student
-          records work across all devices and accounts.
+          If other devices still show old settings after you saved, click this to
+          <strong>force-write every setting to the database right now.</strong>
+          Every user sees the correct values on next login.
         </p>
         <div style="background:var(--blue-50,#eff6ff);border:1px solid var(--blue-200,#bfdbfe);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--blue-800,#1e40af)">
-          ℹ️ Writes to DB: <strong>Academic Year · Current Term · Grading System ·
-          Class/Exam Score Max · Pass Threshold · School Name · Motto</strong>
+          ℹ️ Writes: Academic Year · Current Term · Grading · Class/Exam Score Max · Pass Threshold · School Info
         </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <button class="btn btn-primary" onclick="pushSettingsToAllDevices()" id="btn-push-settings">
@@ -3516,13 +3516,11 @@ async function pgSettings(){
       <div class="card"><div class="card-header"><h3>🔄 Subject Score Migration</h3></div>
       <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
         <p style="font-size:13px;color:var(--gray-500);margin:0">
-          Subjects created before you updated score settings may still carry old
-          class weight / pass threshold values in the database. Update all subjects
-          to match your current settings in one click.
+          Subjects created before you changed score settings may still carry old values.
+          Update <strong>all subjects</strong> to match the current admin settings in one click.
         </p>
         <div style="background:var(--yellow-50,#fffbeb);border:1px solid var(--yellow-200,#fde68a);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--yellow-800,#92400e)">
-          ⚠️ <strong>This overwrites any custom per-subject weights.</strong>
-          Only run this if you want all subjects to use the global settings above.
+          ⚠️ This overwrites custom per-subject weights. Only run if you want all subjects to use the global settings above.
         </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <button class="btn btn-primary" onclick="migrateSubjectSettings()" id="btn-migrate-subjects">
@@ -3667,26 +3665,24 @@ async function removeSchoolLogo(){
   toast('Logo removed');pgSettings();
 }
 async function saveAcademicCfg(){
-  const csmaxEl = document.getElementById('cfg-csmax');
-  const esmaxEl = document.getElementById('cfg-esmax');
-  // Resolve every value: field input → current cfg → GES default.
-  // NEVER leave a value undefined — every key must be written to DB.
-  const csmax = csmaxEl.value !== '' ? parseInt(csmaxEl.value) : (cfg.classScoreMax ?? cfgClassScoreMax());
-  const esmax = esmaxEl.value !== '' ? parseInt(esmaxEl.value) : (cfg.examScoreMax  ?? cfgExamScoreMax());
-  if(csmax + esmax !== 100){toast('Class Score Max + Exam Score Max must sum to 100.','error'); return;}
-  const year  = document.getElementById('cfg-year').value.trim();
-  const term  = document.getElementById('cfg-term').value;
-  if(!year){toast('Academic Year is required','error'); return;}
-  if(!term){toast('Please select a Current Term','error'); return;}
-  const grading = document.getElementById('cfg-grading').value || cfg.gradingSystem || 'ges';
-  const passEl  = document.getElementById('cfg-pass').value;
-  const pass    = passEl !== '' ? parseInt(passEl) : (cfg.passThreshold ?? cfgPassThreshold());
-  const bestxEl = document.getElementById('cfg-bestx').value;
-  const bestx   = bestxEl !== '' ? parseInt(bestxEl) : (cfg.bestXSubjects ?? 0);
-
-  // Write ALL fields to Supabase — no if-guards, no skipping.
-  // This is what makes settings visible on every device and account:
-  // the DB has the real values, not just the admin's localStorage.
+  const csmaxEl=document.getElementById('cfg-csmax');
+  const esmaxEl=document.getElementById('cfg-esmax');
+  // Resolve every value — field input → current cfg → GES default.
+  // Never leave anything undefined; every key MUST be written to DB.
+  const csmax=csmaxEl.value!==''?parseInt(csmaxEl.value):(cfg.classScoreMax??cfgClassScoreMax());
+  const esmax=esmaxEl.value!==''?parseInt(esmaxEl.value):(cfg.examScoreMax??cfgExamScoreMax());
+  if(csmax+esmax!==100){toast('Class Score Max + Exam Score Max must sum to 100.','error');return;}
+  const year=document.getElementById('cfg-year').value.trim();
+  const term=document.getElementById('cfg-term').value;
+  if(!year){toast('Academic Year is required','error');return;}
+  if(!term){toast('Please select a Current Term','error');return;}
+  const grading=document.getElementById('cfg-grading').value||cfg.gradingSystem||'ges';
+  const passEl=document.getElementById('cfg-pass').value;
+  const pass=passEl!==''?parseInt(passEl):(cfg.passThreshold??cfgPassThreshold());
+  const bestxEl=document.getElementById('cfg-bestx').value;
+  const bestx=bestxEl!==''?parseInt(bestxEl):(cfg.bestXSubjects??0);
+  // Write ALL fields unconditionally — no if-guards, no skipping.
+  // This is what makes settings work like student records across all devices.
   await saveCfg('academicYear',  year);
   await saveCfg('currentTerm',   term);
   await saveCfg('gradingSystem', grading);
@@ -3695,127 +3691,90 @@ async function saveAcademicCfg(){
   await saveCfg('passThreshold', pass);
   await saveCfg('bestXSubjects', bestx);
   await saveCfg('setupComplete', 'true');
-
-  // Sync into live cfg immediately so this session reflects the changes
-  cfg.academicYear  = year;  cfg.currentTerm   = term;
-  cfg.gradingSystem = grading; cfg.classScoreMax = csmax;
-  cfg.examScoreMax  = esmax; cfg.passThreshold = pass;
-  cfg.bestXSubjects = bestx; cfg.setupComplete = 'true';
-
-  // Update this device's cache so refresh stays consistent
-  try{ localStorage.setItem('sms_cfg_cache', JSON.stringify(cfg)); }catch(e){}
-
-  await audit('SETTINGS_ACADEMIC',
-    `Settings saved — ${term} ${year} | Class:${csmax} Exam:${esmax} Pass:${pass}`);
-  toast('✅ Settings saved to database — all devices will see these on next login.','success');
+  // Sync into live cfg immediately
+  cfg.academicYear=year; cfg.currentTerm=term; cfg.gradingSystem=grading;
+  cfg.classScoreMax=csmax; cfg.examScoreMax=esmax;
+  cfg.passThreshold=pass; cfg.bestXSubjects=bestx; cfg.setupComplete='true';
+  try{localStorage.setItem('sms_cfg_cache',JSON.stringify(cfg));}catch(e){}
+  await audit('SETTINGS_ACADEMIC',`Settings saved — ${term} ${year} | Class:${csmax} Exam:${esmax} Pass:${pass}`);
+  toast('✅ Settings saved — all devices will see these on next login.','success');
 }
 async function pushSettingsToAllDevices(){
-  // Force every setting into Supabase so ALL devices get correct values on login.
-  // Same mechanism as student records: DB is the single source of truth.
-  const btn = document.getElementById('btn-push-settings');
-  const status = document.getElementById('push-settings-status');
-  btn.disabled = true;
-  btn.textContent = '⏳ Writing to database…';
-  status.textContent = '';
+  const btn=document.getElementById('btn-push-settings');
+  const status=document.getElementById('push-settings-status');
+  btn.disabled=true; btn.textContent='⏳ Writing to database…'; status.textContent='';
   try{
-    const items = [
+    const items=[
       ['academicYear',  cfgYear()],
       ['currentTerm',   cfgTerm()],
-      ['gradingSystem', cfg.gradingSystem  || 'ges'],
+      ['gradingSystem', cfg.gradingSystem||'ges'],
       ['classScoreMax', cfgClassScoreMax()],
       ['examScoreMax',  cfgExamScoreMax()],
       ['passThreshold', cfgPassThreshold()],
-      ['bestXSubjects', cfg.bestXSubjects  ?? 0],
-      ['schoolName',    cfg.schoolName     || ''],
-      ['schoolMotto',   cfg.schoolMotto    || ''],
-      ['schoolAddress', cfg.schoolAddress  || ''],
-      ['schoolPhone',   cfg.schoolPhone    || ''],
+      ['bestXSubjects', cfg.bestXSubjects??0],
+      ['schoolName',    cfg.schoolName||''],
+      ['schoolMotto',   cfg.schoolMotto||''],
+      ['schoolAddress', cfg.schoolAddress||''],
+      ['schoolPhone',   cfg.schoolPhone||''],
       ['setupComplete', 'true'],
     ];
-    let done = 0;
-    for(const [key, value] of items){
-      await saveCfg(key, value);
+    let done=0;
+    for(const [key,value] of items){
+      await saveCfg(key,value);
       done++;
-      status.textContent = `Writing… ${done}/${items.length}`;
+      status.textContent=`Writing… ${done}/${items.length}`;
     }
-    // Keep this device's cache in sync too
-    try{ localStorage.setItem('sms_cfg_cache', JSON.stringify(cfg)); }catch(e){}
-    await audit('PUSH_SETTINGS',
-      `Admin pushed all settings to DB — ${cfgTerm()} ${cfgYear()} | Class:${cfgClassScoreMax()} Exam:${cfgExamScoreMax()} Pass:${cfgPassThreshold()}`);
-    toast('✅ All settings pushed to database. Every user sees these on next login.','success');
-    status.textContent = `✅ ${done} settings written to database.`;
+    try{localStorage.setItem('sms_cfg_cache',JSON.stringify(cfg));}catch(e){}
+    await audit('PUSH_SETTINGS',`Admin pushed all settings — ${cfgTerm()} ${cfgYear()}`);
+    toast('✅ All settings pushed. Every user sees these on next login.','success');
+    status.textContent=`✅ ${done} settings written to database.`;
   }catch(e){
-    console.error('pushSettingsToAllDevices error:', e);
-    toast('❌ Push failed — check your internet connection and try again.','error');
-    status.textContent = '❌ Push failed. Check connection and retry.';
+    console.error('pushSettingsToAllDevices error:',e);
+    toast('❌ Push failed — check your internet connection.','error');
+    status.textContent='❌ Push failed. Check connection and retry.';
   }
-  btn.disabled = false;
-  btn.textContent = '📡 Push All Settings to Database Now';
+  btn.disabled=false; btn.textContent='📡 Push All Settings to Database Now';
 }
 
 async function migrateSubjectSettings(){
-  // Updates every subject in DB to the current global class weight + pass threshold.
-  // Required because subjects created with old defaults still carry those values.
-  const btn = document.getElementById('btn-migrate-subjects');
-  const status = document.getElementById('migrate-status');
-  const newCW = cfgClassScoreMax();
-  const newPT = cfgPassThreshold();
-
-  const confirmed = await new Promise(resolve=>{
+  const btn=document.getElementById('btn-migrate-subjects');
+  const status=document.getElementById('migrate-status');
+  const newCW=cfgClassScoreMax(), newPT=cfgPassThreshold();
+  const confirmed=await new Promise(resolve=>{
     showModal('🔄 Apply Settings to All Subjects',
       `<p style="margin:0 0 12px">Update <strong>every subject</strong> in the database to:</p>
        <ul style="margin:0 0 12px;padding-left:20px;line-height:2">
          <li>Class Weight → <strong>${newCW}%</strong></li>
-         <li>Exam Weight  → <strong>${100-newCW}%</strong></li>
+         <li>Exam Weight → <strong>${100-newCW}%</strong></li>
          <li>Pass Threshold → <strong>${newPT}%</strong></li>
        </ul>
-       <p style="margin:0;font-size:13px;color:var(--red,#dc2626)">
-         ⚠️ Custom per-subject weights will be overwritten.
-       </p>`,
-      [{label:'Cancel', action:()=>resolve(false), class:'btn-secondary'},
-       {label:'Apply to All Subjects', action:()=>resolve(true), class:'btn-primary'}]
+       <p style="margin:0;font-size:13px;color:var(--red,#dc2626)">⚠️ Custom per-subject weights will be overwritten.</p>`,
+      [{label:'Cancel',action:()=>resolve(false),class:'btn-secondary'},
+       {label:'Apply to All Subjects',action:()=>resolve(true),class:'btn-primary'}]
     );
   });
   if(!confirmed) return;
-
-  btn.disabled = true;
-  btn.textContent = '⏳ Updating subjects…';
-  status.textContent = '';
+  btn.disabled=true; btn.textContent='⏳ Updating…'; status.textContent='';
   try{
-    const subjects = await dbGetAll('subjects');
-    if(!subjects || subjects.length === 0){
-      toast('No subjects found in database.','error');
-      btn.disabled = false;
-      btn.textContent = '🔄 Apply Current Settings to All Subjects';
-      return;
+    const subjects=await dbGetAll('subjects');
+    if(!subjects||subjects.length===0){
+      toast('No subjects found.','error');
+      btn.disabled=false; btn.textContent='🔄 Apply Current Settings to All Subjects'; return;
     }
-    let updated = 0, failed = 0;
+    let updated=0,failed=0;
     for(const subj of subjects){
-      try{
-        await dbUpdate('subjects', subj.id, {...subj, classWeight:newCW, passThreshold:newPT});
-        updated++;
-      }catch(e){
-        console.warn(`Could not update subject "${subj.name}":`, e);
-        failed++;
-      }
-      status.textContent = `Updating… ${updated + failed}/${subjects.length}`;
+      try{await dbUpdate('subjects',subj.id,{...subj,classWeight:newCW,passThreshold:newPT});updated++;}
+      catch(e){console.warn(`Could not update "${subj.name}":`,e);failed++;}
+      status.textContent=`Updating… ${updated+failed}/${subjects.length}`;
     }
-    await audit('MIGRATE_SUBJECTS',
-      `Applied classWeight=${newCW} passThreshold=${newPT} to ${updated} subjects`);
-    if(failed === 0){
-      toast(`✅ All ${updated} subject${updated===1?'':'s'} updated.`,'success');
-      status.textContent = `✅ ${updated} subject${updated===1?'':'s'} updated.`;
-    }else{
-      toast(`⚠️ ${updated} updated, ${failed} failed — check console.`,'error');
-      status.textContent = `⚠️ ${updated} updated, ${failed} failed.`;
-    }
+    await audit('MIGRATE_SUBJECTS',`Applied classWeight=${newCW} passThreshold=${newPT} to ${updated} subjects`);
+    toast(failed===0?`✅ All ${updated} subjects updated.`:`⚠️ ${updated} updated, ${failed} failed.`,failed===0?'success':'error');
+    status.textContent=failed===0?`✅ ${updated} subjects updated.`:`⚠️ ${updated} updated, ${failed} failed.`;
   }catch(e){
-    console.error('migrateSubjectSettings error:', e);
-    toast('❌ Migration failed — check your connection.','error');
-    status.textContent = '❌ Migration failed.';
+    console.error('migrateSubjectSettings error:',e);
+    toast('❌ Migration failed.','error'); status.textContent='❌ Migration failed.';
   }
-  btn.disabled = false;
-  btn.textContent = '🔄 Apply Current Settings to All Subjects';
+  btn.disabled=false; btn.textContent='🔄 Apply Current Settings to All Subjects';
 }
 
 async function saveEmailJSCfg(){
@@ -4792,11 +4751,9 @@ async function saveSecurityCfg(){
 //  INIT
 // ═══════════════════════════════════════════
 async function init(){
-  // Pre-hydrate DISPLAY-ONLY fields (school name, logo, dark mode, language)
-  // from localStorage so the login screen looks right instantly.
-  // Academic settings (term, year, scores, pass threshold) are intentionally
-  // excluded here — they MUST come from Supabase DB so every device/account
-  // always sees what the admin saved, not stale browser-local values.
+  // Hydrate cfg from localStorage cache immediately — before any async DB call.
+  // This ensures settings are available instantly on refresh without waiting for
+  // the network, and provides a fallback if the DB load fails.
   try{
     const cached=localStorage.getItem('sms_cfg_cache');
     if(cached){
