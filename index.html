@@ -3449,15 +3449,28 @@ async function pgSettings(){
     ${isFirstRun?`<div class="warn-box" style="margin-bottom:20px">🎉 <strong>Welcome! First-time setup detected.</strong> Please fill in your school information and academic settings below, then click Save. All fields are optional — you can update them at any time.</div>`:''}
     ${isTeacher?`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px;margin-bottom:16px">
-      <div class="card"><div class="card-header" style="display:flex;align-items:center;justify-content:space-between"><h3>📅 Academic Settings</h3><span style="font-size:11px;background:var(--gold);color:var(--navy);padding:2px 8px;border-radius:99px;font-weight:600">View Only</span></div><div class="card-body" style="display:flex;flex-direction:column;gap:12px">
-        <div class="fg"><label>Academic Year</label><input type="text" value="${escHtml(cfg.academicYear||'(Not set)')}" disabled style="background:var(--gray-50,#f9fafb);color:var(--gray-500);cursor:not-allowed"></div>
-        <div class="fg"><label>Current Term</label><input type="text" value="${escHtml(cfg.currentTerm||'(Not set)')}" disabled style="background:var(--gray-50,#f9fafb);color:var(--gray-500);cursor:not-allowed"></div>
-        <div class="fg"><label>Default Grading System</label><input type="text" value="${cfg.gradingSystem==='ges'?'GES (A1–F9)':cfg.gradingSystem==='simple'?'Simple (A–F)':(cfg.gradingSystem||'(Not set)')}" disabled style="background:var(--gray-50,#f9fafb);color:var(--gray-500);cursor:not-allowed"></div>
-        <div class="fg"><label>Class Score Max</label><input type="number" value="${cfg.classScoreMax!=null?cfg.classScoreMax:cfgClassScoreMax()}" disabled style="background:var(--gray-50,#f9fafb);color:var(--gray-500);cursor:not-allowed"></div>
-        <div class="fg"><label>Exam Score Max</label><input type="number" value="${cfg.examScoreMax!=null?cfg.examScoreMax:cfgExamScoreMax()}" disabled style="background:var(--gray-50,#f9fafb);color:var(--gray-500);cursor:not-allowed"></div>
-        <div class="fg"><label>Global Pass Threshold (%)</label><input type="number" value="${cfg.passThreshold!=null?cfg.passThreshold:cfgPassThreshold()}" disabled style="background:var(--gray-50,#f9fafb);color:var(--gray-500);cursor:not-allowed"></div>
-        <div class="fg"><label>Best X Subjects for Aggregate <span style="font-size:11px;color:var(--gray-400)">(0 = all subjects)</span></label><input type="number" value="${cfg.bestXSubjects!=null?cfg.bestXSubjects:0}" disabled style="background:var(--gray-50,#f9fafb);color:var(--gray-500);cursor:not-allowed"></div>
-        <div style="font-size:11px;color:var(--gray-400);padding:6px 10px;background:var(--gray-50,#f9fafb);border-radius:6px;border:1px solid var(--gray-200)">ℹ️ These settings are configured by the admin. Contact your administrator to make changes.</div>
+      <div class="card"><div class="card-header"><h3>📅 Academic Settings</h3></div><div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+        <div class="fg"><label>Academic Year <span style="color:var(--red)">*</span></label><input type="text" id="cfg-year" value="${escHtml(cfg.academicYear||'')}" placeholder="e.g. 2024/2025"></div>
+        <div class="fg"><label>Current Term <span style="color:var(--red)">*</span></label>
+          <select id="cfg-term">
+            <option value="">— Select Term —</option>
+            <option value="Term 1" ${cfg.currentTerm==='Term 1'?'selected':''}>Term 1</option>
+            <option value="Term 2" ${cfg.currentTerm==='Term 2'?'selected':''}>Term 2</option>
+            <option value="Term 3" ${cfg.currentTerm==='Term 3'?'selected':''}>Term 3</option>
+          </select>
+        </div>
+        <div class="fg"><label>Default Grading System</label>
+          <select id="cfg-grading">
+            <option value="">— Select Grading —</option>
+            <option value="ges" ${cfg.gradingSystem==='ges'?'selected':''}>GES (A1–F9)</option>
+            <option value="simple" ${cfg.gradingSystem==='simple'?'selected':''}>Simple (A–F)</option>
+          </select>
+        </div>
+        <div class="fg"><label>Class Score Max <span style="font-size:11px;color:var(--gray-400)">(must sum to 100 with Exam)</span></label><input type="number" id="cfg-csmax" value="${cfg.classScoreMax!=null?cfg.classScoreMax:cfgClassScoreMax()}" min="10" max="60" placeholder="e.g. 30"></div>
+        <div class="fg"><label>Exam Score Max</label><input type="number" id="cfg-esmax" value="${cfg.examScoreMax!=null?cfg.examScoreMax:cfgExamScoreMax()}" min="40" max="90" placeholder="e.g. 70"></div>
+        <div class="fg"><label>Global Pass Threshold (%)</label><input type="number" id="cfg-pass" value="${cfg.passThreshold!=null?cfg.passThreshold:cfgPassThreshold()}" min="0" max="100" placeholder="e.g. 50"></div>
+        <div class="fg"><label>Best X Subjects for Aggregate <span style="font-size:11px;color:var(--gray-400)">(0 = all subjects)</span></label><input type="number" id="cfg-bestx" value="${cfg.bestXSubjects!=null?cfg.bestXSubjects:0}" min="0" max="20" placeholder="e.g. 0"></div>
+        <button class="btn btn-primary" onclick="saveAcademicCfg()">💾 Save Academic Settings</button>
       </div></div>
     </div>`:``}
     <div style="display:grid;grid-template-columns:${isAdmin?'1fr 1fr':'1fr'};gap:16px;max-width:900px">
